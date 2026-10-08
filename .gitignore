@@ -1,0 +1,22 @@
+# Environments
+venv/
+.env
+
+# Data (large, regenerable)
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Vector DB (used from Week 2)
+chroma_db/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+.vscode/
