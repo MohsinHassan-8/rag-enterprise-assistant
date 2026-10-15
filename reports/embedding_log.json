@@ -1,0 +1,20 @@
+{
+  "timestamp_utc": "2026-10-15T20:41:07+00:00",
+  "model": "sentence-transformers/all-MiniLM-L6-v2",
+  "device": "cuda",
+  "gpu": "NVIDIA GeForce GTX 1650",
+  "batch_size": 64,
+  "embedding_dim": 384,
+  "max_seq_length_tokens": 256,
+  "chunks_total": 34509,
+  "chunks_dropped_short": 0,
+  "chunks_embedded": 34509,
+  "chunks_over_token_limit": 151,
+  "median_tokens_per_chunk": 146,
+  "model_load_seconds": 7.0,
+  "warmup_seconds": 0.67,
+  "encode_seconds": 132.78,
+  "chunks_per_second": 259.9,
+  "ms_per_chunk": 3.848,
+  "peak_gpu_memory_gb": 0.41
+}
