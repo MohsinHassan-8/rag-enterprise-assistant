@@ -1,0 +1,10 @@
+{
+  "timestamp_utc": "2026-10-15T20:47:42+00:00",
+  "collection": "wiki_chunks",
+  "distance_space": "cosine",
+  "chunks_in_collection": 34509,
+  "embedding_dim": 384,
+  "ingest_seconds": 33.2,
+  "chunks_per_second": 1039.3,
+  "chroma_db_size_mb": 226.0
+}
