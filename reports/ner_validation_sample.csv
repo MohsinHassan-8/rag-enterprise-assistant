@@ -1,0 +1,41 @@
+﻿n,id,title,sentence,predicted
+1,25792,Vein,"Veins carry blood to the heart and move to the heart through the vena cava, the biggest vein in human body Other important veins are the coronary veins(veins on the heart) and renal veins(veins on the kidney).",[]
+2,6664,Bomber,"During the Cold War, a few bombers were made that could travel supersonic, so a nuclear bomb could be dropped without killing the people in the airplane.",[]
+3,5589,Glastonbury,Gallery Towns in Somerset Civil parishes in Somerset,"[('Somerset', 'GPE'), ('Somerset', 'GPE')]"
+4,536,Nēnē,It is found today on only three Hawaiian islands.,[]
+5,26806,Apollo,"Python chased Leto to the edge of the sea, where Leto swam to the island of Delos.","[('Leto', 'PERSON'), ('Delos', 'ORG')]"
+6,38632,Pepper,"It contains the Chili pepper which is most often used as a vegetable Sichuan pepper, a condiment that is different from black pepper, and unrelated to it.","[('Sichuan', 'GPE')]"
+7,23214,Alyssa Milano,"In October 2017, Milano helped popularized the #MeToo movement, an international internet movement, to raise awareness of the dangers and victims of sexual abuse and sexual harassment.","[('Milano', 'ORG'), ('MeToo', 'PERSON')]"
+8,51271,Uppsala,It is also known for the 'Flogsta scream'.,[]
+9,3592,Mecca,Mecca or Makkah (officially: Makkah al-Mukarramah; ) is a city in Saudi Arabia and the holiest city in Islam.,"[('Mecca', 'GPE'), ('Makkah', 'PERSON'), ('Makkah al-Mukarramah', 'PERSON'), ('Saudi Arabia', 'GPE'), ('Islam', 'GPE')]"
+10,49431,Naginata,It is said naginata have first been used in China in around 3 B.C.,"[('China', 'GPE')]"
+11,17663,Sarah McLachlan,McLachlan received the Elizabeth Cady Stanton Visionary Award in 1998 for helping women's music.,"[('McLachlan', 'PERSON'), ('the Elizabeth Cady Stanton Visionary Award', 'ORG')]"
+12,47603,Council of the European Union,"Along with the European Parliament, it is responsible for law making for the European Union (EU).","[('the European Parliament', 'ORG'), ('the European Union', 'ORG'), ('EU', 'ORG')]"
+13,15252,Arthur C. Clarke,"A Space Odyssey, and for working with director Stanley Kubrick on the movie of the same name.","[('Stanley Kubrick', 'PERSON')]"
+14,28896,Wilhelm Friedemann Bach,"After his father's death in 1750, Wilhelm Friedemann inherited as lot of his father's music, and tried to make people think they were his compositions.","[('Wilhelm Friedemann', 'PERSON')]"
+15,29270,Mughal Empire,The Mughal rule in India saw the country being united as one single unit and being administered under one single powerful ruler.,"[('India', 'GPE')]"
+16,18708,Dust (disambiguation),Dust (Mourning Beloveth album) Dust (Peter Murphy album),"[('Peter Murphy', 'PERSON')]"
+17,7693,Dwight D. Eisenhower,"He learned about hunting and fishing, cooking, and card playing from a man named Bob Davis who camped on the Smoky Hill River.","[('Bob Davis', 'PERSON'), ('the Smoky Hill River', 'LOC')]"
+18,20095,Salmon,This is a problem caused by the re-introduction of beavers to the U.K. Sluice gates are opened for the salmon at breeding time.,"[('the U.K. Sluice', 'ORG')]"
+19,43366,Oyster,"Oysters are a family of bivalves with rough, thick shells, the Ostreidae.",[]
+20,37091,Palace of Soviets,"During its design, there were many changes to how it would look and to the location of the palace in Moscow. 1930s in the Soviet Union Palaces in Russia","[('Moscow', 'GPE'), ('the Soviet Union', 'GPE'), ('Russia', 'GPE')]"
+21,21163,Caribbean Community,"The Caribbean Community , or CARICOM, is a group of nations in the Caribbean Sea that have come together founded on 4 July 1973.","[('The Caribbean Community', 'ORG'), ('CARICOM', 'ORG'), ('the Caribbean Sea', 'LOC')]"
+22,6799,MacOS,This is called Hackintosh and violates macOS' license agreement.,"[('Hackintosh', 'ORG'), ('macOS', 'PERSON')]"
+23,26827,Hemera,Hemera was the goddess of daylight in Greek mythology.,"[('Hemera', 'ORG')]"
+24,18125,Phenomenon,"A phenomenon (Greek: , pl. ) is an observable event or, quite literally, something that can be seen.",[]
+25,28870,Real Salt Lake,"Current Roster As of January 15, 2009.",[]
+26,40458,Helmut Schmidt,"From 1961 to 1965, he was Senator in the state government of Hamburg.","[('Hamburg', 'GPE')]"
+27,22904,Hat,"For years workmen in Britain wore caps, but foremen (supervisors) wore bowler hats.","[('Britain', 'GPE')]"
+28,19950,Verona,It is famous for being the setting for the Shakespeare play Romeo and Juliet and because of the Roman Arena.,"[('Shakespeare', 'PERSON'), ('Romeo', 'PERSON'), ('Juliet', 'PERSON')]"
+29,4609,Murasaki Shikibu,"It is one of the earliest novels in Japanese, and is often thought of as the first novel in the world.",[]
+30,3789,PlayStation,Peripherals PocketStation The PocketStation was a very small games console released as a peripheral (an extra accessory) for the PlayStation.,"[('PocketStation', 'ORG')]"
+31,5816,Ship,"For trade and transport the Dutch often used a particular kind of trading ship, called a flut",[]
+32,9488,Göran Persson,"He was the leader of the Swedish Social Democratic Party, but quit in March 2007.","[('the Swedish Social Democratic Party', 'ORG')]"
+33,41498,"Gilbertville, Ontario","In addition to all this, Gilbertville is also the site of a former army base and was founded by the Gilbert family in the 19th century as a place to rest horses when travelling to and from the towns of Simcoe and Delhi.","[('Gilbertville', 'PERSON'), ('Gilbert', 'PERSON'), ('Delhi', 'GPE')]"
+34,21513,Game theory,"In that case the ""players"" being studied were the United States and the Soviet Union.","[('the United States', 'GPE'), ('the Soviet Union', 'GPE')]"
+35,117,Continent,Australia Some sources say that Australia is one of the seven continents.,"[('Australia', 'GPE'), ('Australia', 'GPE')]"
+36,30454,Eating,"When you are proven to be fat or obese through your body mass index (BMI), it means you are heavier than the average for your height.","[('BMI', 'ORG')]"
+37,20525,North West England,The northern area (which includes Cumbria and part of Lancashire) is full of villages.,"[('Cumbria', 'ORG'), ('Lancashire', 'ORG')]"
+38,32576,Jane Pierce,"Marriage How she met Pierce, a young lawyer with political ambitions, is unknown, but her brother-in-law Alpheus S. Packard was one of Pierce's instructors at Bowdoin.","[('Pierce', 'PERSON'), ('Alpheus S. Packard', 'ORG'), ('Pierce', 'ORG')]"
+39,31722,Necktie,Bow ties The bow tie is a type of necktie.,[]
+40,23067,Old Trafford,"It cost about £60,000,000 to build. 1910 establishments in the United Kingdom 1910s establishments in England Football stadiums in England Sport in Greater Manchester Buildings and structures in Greater Manchester Manchester United F.C.","[('the United Kingdom\n1910s', 'GPE'), ('England', 'GPE'), ('England', 'GPE'), ('Greater Manchester', 'LOC')]"

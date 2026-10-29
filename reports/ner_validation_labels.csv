@@ -1,0 +1,77 @@
+﻿n,entity,label,verdict
+3,Somerset,GPE,correct
+3,Somerset,GPE,correct
+5,Leto,PERSON,correct
+5,Delos,ORG,wrong
+5,Delos,LOC,missed
+6,Sichuan,GPE,wrong
+7,Milano,ORG,wrong
+7,MeToo,PERSON,wrong
+7,Milano,PERSON,missed
+9,Mecca,GPE,correct
+9,Makkah,PERSON,wrong
+9,Makkah al-Mukarramah,PERSON,wrong
+9,Saudi Arabia,GPE,correct
+9,Islam,GPE,wrong
+9,Makkah,GPE,missed
+9,Makkah al-Mukarramah,GPE,missed
+10,China,GPE,correct
+11,McLachlan,PERSON,correct
+11,the Elizabeth Cady Stanton Visionary Award,ORG,wrong
+12,the European Parliament,ORG,correct
+12,the European Union,ORG,correct
+12,EU,ORG,correct
+13,Stanley Kubrick,PERSON,correct
+14,Wilhelm Friedemann,PERSON,correct
+15,India,GPE,correct
+16,Peter Murphy,PERSON,correct
+16,Mourning Beloveth,ORG,missed
+17,Bob Davis,PERSON,correct
+17,the Smoky Hill River,LOC,correct
+18,the U.K. Sluice,ORG,wrong
+18,U.K.,GPE,missed
+20,Moscow,GPE,correct
+20,the Soviet Union,GPE,correct
+20,Russia,GPE,correct
+21,The Caribbean Community,ORG,correct
+21,CARICOM,ORG,correct
+21,the Caribbean Sea,LOC,correct
+22,Hackintosh,ORG,wrong
+22,macOS,PERSON,wrong
+23,Hemera,ORG,wrong
+23,Hemera,PERSON,missed
+26,Hamburg,GPE,correct
+27,Britain,GPE,correct
+28,Shakespeare,PERSON,correct
+28,Romeo,PERSON,wrong
+28,Juliet,PERSON,wrong
+30,PocketStation,ORG,wrong
+32,the Swedish Social Democratic Party,ORG,correct
+33,Gilbertville,PERSON,wrong
+33,Gilbert,PERSON,correct
+33,Delhi,GPE,correct
+33,Gilbertville,GPE,missed
+33,Simcoe,GPE,missed
+34,the United States,GPE,correct
+34,the Soviet Union,GPE,correct
+35,Australia,GPE,correct
+35,Australia,GPE,correct
+36,BMI,ORG,wrong
+37,Cumbria,ORG,wrong
+37,Lancashire,ORG,wrong
+37,Cumbria,GPE,missed
+37,Lancashire,GPE,missed
+38,Pierce,PERSON,correct
+38,Alpheus S. Packard,ORG,wrong
+38,Pierce,ORG,wrong
+38,Alpheus S. Packard,PERSON,missed
+38,Pierce,PERSON,missed
+38,Bowdoin,ORG,missed
+40,the United Kingdom 1910s,GPE,wrong
+40,England,GPE,correct
+40,England,GPE,correct
+40,Greater Manchester,LOC,wrong
+40,United Kingdom,GPE,missed
+40,Greater Manchester,GPE,missed
+40,Greater Manchester,GPE,missed
+40,Manchester United F.C.,ORG,missed
