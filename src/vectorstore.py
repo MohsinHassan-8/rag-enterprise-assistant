@@ -95,3 +95,48 @@ def search(collection, query_embedding, n_results: int = 5, where: dict | None =
             start=1,
         )
     ]
+
+PLACE_FIELDS = ["place_1", "place_2", "place_3", "place_4", "place_5"]
+
+
+def build_where(theme=None, topic_id=None, place=None):
+    """Build a Chroma `where` filter from optional theme, topic id and place.
+
+    A place matches if it is in any of the place_1..place_5 metadata slots.
+    Returns None when no filter is given.
+    """
+    clauses = []
+    if theme is not None:
+        if not isinstance(theme, str) or not theme.strip():
+            raise ValueError("theme must be a non-empty string")
+        clauses.append({"theme": theme})
+    if topic_id is not None:
+        if isinstance(topic_id, bool) or not isinstance(topic_id, int):
+            raise ValueError("topic_id must be an int")
+        clauses.append({"topic_id": topic_id})
+    if place is not None:
+        if not isinstance(place, str) or not place.strip():
+            raise ValueError("place must be a non-empty string")
+        clauses.append({"$or": [{f: place} for f in PLACE_FIELDS]})
+    if not clauses:
+        return None
+    return clauses[0] if len(clauses) == 1 else {"$and": clauses}
+
+
+def update_metadata(collection, ids, metadatas, batch_size: int = DEFAULT_BATCH_SIZE) -> dict:
+    """Replace metadata for existing ids in batches. Vectors and text are untouched."""
+    n = len(ids)
+    if len(metadatas) != n:
+        raise ValueError("metadatas must have the same length as ids")
+    if batch_size <= 0:
+        raise ValueError("batch_size must be positive")
+    if len(set(ids)) != n:
+        raise ValueError("ids must be unique")
+    for m in metadatas:
+        for k, v in m.items():
+            if v is None or not isinstance(v, (str, int, float, bool)):
+                raise ValueError("metadata value for %r must be str, int, float or bool" % k)
+    for start in range(0, n, batch_size):
+        collection.update(ids=ids[start : start + batch_size],
+                          metadatas=metadatas[start : start + batch_size])
+    return {"updated": n}

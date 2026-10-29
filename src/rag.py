@@ -22,7 +22,7 @@ from pathlib import Path
 
 from src.llm_client import LLMError, LLMTokenLimitError
 from src.prompts import build_messages, clean_question, is_refusal
-from src.vectorstore import DEFAULT_COLLECTION, get_collection, search
+from src.vectorstore import DEFAULT_COLLECTION, build_where, get_collection, search
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_LOG_PATH = ROOT / "logs" / "rag_requests.jsonl"
@@ -39,6 +39,10 @@ LLM_ERROR_MESSAGE = (
     "The retrieved sources are included."
 )
 INVALID_QUERY_MESSAGE = "Please provide a non-empty question."
+FILTER_EMPTY_MESSAGE = (
+    "No passages match the requested filter, so I did not attempt an answer. "
+    "Try a different theme or place, or remove the filter."
+)
 
 _STOPWORDS = frozenset(
     """a an and are as at be been but by can could did do does for from had has have he her
@@ -155,6 +159,7 @@ class RAGResponse:
     latency_ms: dict = field(default_factory=dict)
     usage: dict = field(default_factory=dict)
     error: str | None = None
+    filters: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -171,6 +176,8 @@ def _source_dicts(hits: list[dict]) -> list[dict]:
                 "title": meta.get("title"),
                 "chunk_index": meta.get("chunk_index"),
                 "score": round(hit["score"], 4),
+                "theme": meta.get("theme"),
+                "places": meta.get("places"),
                 "text": hit.get("text") or "",
             }
         )
@@ -192,9 +199,10 @@ class RAGPipeline:
         self.config = config or RAGConfig()
         self.log_path = Path(log_path) if log_path is not None else None
 
-    def answer(self, question: str) -> RAGResponse:
+    def answer(self, question: str, theme: str | None = None, place: str | None = None) -> RAGResponse:
         cfg = self.config
         t_start = time.perf_counter()
+        filters = {k: v for k, v in (("theme", theme), ("place", place)) if v is not None}
         lat = dict.fromkeys(
             ("embed_ms", "search_ms", "retrieval_ms", "llm_ms",
              "llm_retry_wait_ms", "check_ms", "total_ms"),
@@ -207,13 +215,21 @@ class RAGPipeline:
             resp = RAGResponse(
                 question=str(question or ""), status="invalid_query", answer=INVALID_QUERY_MESSAGE
             )
-            return self._finish(resp, lat, t_start)
+            return self._finish(resp, lat, t_start, filters)
+
+        try:
+            where = build_where(theme=theme, place=place)
+        except ValueError as exc:
+            resp = RAGResponse(
+                question=q, status="invalid_query", answer=f"Invalid filter: {exc}", filters=filters
+            )
+            return self._finish(resp, lat, t_start, filters)
 
         # 1. Retrieve
         t0 = time.perf_counter()
         vec = self.embed_fn(q)
         t1 = time.perf_counter()
-        hits = search(self.collection, vec, n_results=cfg.top_k)
+        hits = search(self.collection, vec, n_results=cfg.top_k, where=where)
         t2 = time.perf_counter()
         lat["embed_ms"] = (t1 - t0) * 1000
         lat["search_ms"] = (t2 - t1) * 1000
@@ -226,11 +242,11 @@ class RAGPipeline:
             resp = RAGResponse(
                 question=q,
                 status="off_topic",
-                answer=OFF_TOPIC_MESSAGE,
+                answer=FILTER_EMPTY_MESSAGE if (filters and not hits) else OFF_TOPIC_MESSAGE,
                 warnings=["no_results" if not hits else "below_relevance_threshold"],
                 top_score=top_score,
             )
-            return self._finish(resp, lat, t_start)
+            return self._finish(resp, lat, t_start, filters)
 
         # 3. Generate
         t3 = time.perf_counter()
@@ -246,7 +262,7 @@ class RAGPipeline:
                 top_score=top_score,
                 error=f"{type(exc).__name__}: {exc}",
             )
-            return self._finish(resp, lat, t_start)
+            return self._finish(resp, lat, t_start, filters)
         lat["llm_ms"] = (time.perf_counter() - t3) * 1000
         lat["llm_retry_wait_ms"] = result.retry_wait_ms
         usage = {
@@ -297,7 +313,7 @@ class RAGPipeline:
             top_score=top_score,
             usage=usage,
         )
-        return self._finish(resp, lat, t_start)
+        return self._finish(resp, lat, t_start, filters)
 
     def _generate(self, question: str, hits: list[dict]):
         """Call the LLM; on a token-limit error retry once with half the context."""
@@ -318,8 +334,9 @@ class RAGPipeline:
                     raise
         raise RuntimeError("unreachable")
 
-    def _finish(self, resp: RAGResponse, lat: dict, t_start: float) -> RAGResponse:
+    def _finish(self, resp: RAGResponse, lat: dict, t_start: float, filters: dict | None = None) -> RAGResponse:
         lat["total_ms"] = (time.perf_counter() - t_start) * 1000
+        resp.filters = dict(filters or {})
         resp.latency_ms = {k: round(v, 2) for k, v in lat.items()}
         self._log(resp)
         return resp
@@ -333,6 +350,7 @@ class RAGPipeline:
             "status": resp.status,
             "top_score": resp.top_score,
             "n_sources": len(resp.sources),
+            "filters": resp.filters,
             "sources": [
                 {k: s[k] for k in ("number", "title", "chunk_index", "score")}
                 for s in resp.sources

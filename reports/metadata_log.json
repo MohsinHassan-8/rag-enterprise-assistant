@@ -1,0 +1,44 @@
+{
+  "chunks_updated": 34509,
+  "update_seconds": 14.5,
+  "chunks_with_place": 28782,
+  "chunks_per_theme": {
+    "Unclassified": 5015,
+    "Math, units and time": 708,
+    "Arts and literature": 792,
+    "Music": 1957,
+    "Film, TV and anime": 1838,
+    "Animals and nature": 1115,
+    "Politics and government": 1107,
+    "Computing": 1037,
+    "Sports": 576,
+    "Language": 493,
+    "Asia and Middle East": 1250,
+    "Dates and years": 7392,
+    "Religion, myth and philosophy": 1102,
+    "Technology and transport": 691,
+    "Food and plants": 281,
+    "Earth, space and weather": 831,
+    "Human body and medicine": 1437,
+    "Economics and business": 210,
+    "North America": 815,
+    "Latin America and Caribbean": 492,
+    "Games": 447,
+    "Europe": 1590,
+    "History": 1324,
+    "Society and everyday life": 422,
+    "Physics and chemistry": 1118,
+    "Africa": 241,
+    "Oceania and Pacific": 228
+  },
+  "filter_test": {
+    "theme": "Music",
+    "place": "Massachusetts"
+  },
+  "search_p50_ms": {
+    "unfiltered": 6.84,
+    "theme": 24.52,
+    "place": 31.0,
+    "theme+place": 39.36
+  }
+}
