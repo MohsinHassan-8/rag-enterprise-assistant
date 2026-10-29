@@ -1,0 +1,10 @@
+group,documents,unclassified,unclassified_pct
+length <400,565,117,20.7
+length 400-799,1397,300,21.5
+length 800-1499,1449,305,21.0
+length 1500-2999,1386,270,19.5
+length 3000+,1477,284,19.2
+all topical documents,6274,1276,20.3
+titles starting 'List of',64,12,18.8
+titles with '(disambiguation)',26,9,34.6
+all other titles,6184,1255,20.3
