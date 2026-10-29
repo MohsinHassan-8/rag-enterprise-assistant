@@ -1,0 +1,44 @@
+{
+  "latency_ms": {
+    "unfiltered": {
+      "n": 120,
+      "p50": 7.44,
+      "p95": 14.32
+    },
+    "theme": {
+      "n": 120,
+      "p50": 20.03,
+      "p95": 28.37
+    },
+    "place": {
+      "n": 40,
+      "p50": 33.43,
+      "p95": 40.45
+    },
+    "theme+place": {
+      "n": 40,
+      "p50": 22.92,
+      "p95": 32.74
+    }
+  },
+  "chunks_matched": {
+    "unfiltered": null,
+    "theme": {
+      "min": 447,
+      "max": 1957
+    },
+    "place": {
+      "min": 134,
+      "max": 4268
+    },
+    "theme+place": {
+      "min": 42,
+      "max": 357
+    }
+  },
+  "cases": 12,
+  "kept": 9,
+  "hidden": 0,
+  "surfaced": 1,
+  "reps": 10
+}
