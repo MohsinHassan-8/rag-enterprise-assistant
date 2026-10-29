@@ -9,6 +9,7 @@ End-to-end Retrieval-Augmented Generation (RAG) pipeline: data ingestion, embedd
 | 1 | Environment, data ingestion, preprocessing | Done |
 | 2 | Chunking, embeddings, vector database, retrieval benchmark | Done |
 | 3 | LLM integration, prompt engineering, guarded RAG pipeline | Done |
+| 4 | NLP analysis: topics, named entities, metadata filtering | Done |
 
 ## Setup
 
@@ -135,7 +136,7 @@ python scripts\embed_chunks.py              # downloads the model on first run
 python scripts\ingest_chroma.py --reset     # -> chroma_db/
 python scripts\search_demo.py "How do solar eclipses happen?" --k 3
 python scripts\benchmark_retrieval.py       # -> reports/retrieval_benchmark.json
-python -m pytest -q                         # 191 tests (all weeks)
+python -m pytest -q                         # 221 tests (all weeks)
 ```
 
 ## Week 3: LLM Integration & Prompt Engineering
@@ -147,7 +148,7 @@ python -m pytest -q                         # 191 tests (all weeks)
 - `src/rag.py`: pipeline of retrieve, relevance gate, generate, verify, and log latency (40 unit tests, fake LLM)
 - `scripts/ask.py` (command-line questions), `scripts/run_rag_eval.py` (16-query evaluation), `scripts/list_llm_models.py` and `scripts/smoke_llm.py` (check which model IDs are live and that the key works)
 - `reports/rag_eval.json`: evaluation results. Per-request latency logs go to `logs/rag_requests.jsonl` (git-ignored)
-- Test suite: 191 tests in total across all weeks
+- Test suite at the end of Week 3: 191 tests
 
 ### Measured results
 
@@ -217,10 +218,130 @@ python scripts\list_llm_models.py       # shows the live model IDs for your key
 python scripts\smoke_llm.py             # one test call
 python scripts\ask.py "Who was the first person to walk on the moon?"
 python scripts\run_rag_eval.py          # 16-query evaluation, about 3 minutes
-python -m pytest -q                     # 191 tests, no API key needed
+python -m pytest -q                     # 221 tests, no API key needed
 ```
 
 Requires the Chroma database from the Week 2 steps. The unit tests run without a key because the API is mocked.
+
+## Week 4: NLP Analysis (Topics and Named Entities)
+
+### Delivered
+
+- `scripts/build_doc_embeddings.py`: one normalized vector per document (the mean of its chunk vectors), after checking that the stored embeddings match the chunk order
+- `scripts/run_topics.py`: BERTopic topic modeling on those vectors, with date and year pages set aside by a title rule. Writes `reports/topic_review.csv`
+- `src/topic_themes.py` and `scripts/build_doc_themes.py`: hand-made mapping of the 109 topics to 25 broad themes (`reports/theme_summary.csv`)
+- Manual validation: `scripts/sample_for_validation.py` and `scripts/score_theme_validation.py` (topic themes), `scripts/sample_ner_validation.py` and `scripts/score_ner_validation.py` (NER). Samples and labels are in `reports/`
+- `scripts/extract_places.py` and `src/place_utils.py`: place entities (GPE, LOC) per document with spaCy, normalised
+- `scripts/enrich_chroma.py`: writes theme, topic id and places into the metadata of all 34,509 chunks in ChromaDB, then verifies it (`reports/metadata_log.json`)
+- `src/vectorstore.py`: `build_where()` for filters and `update_metadata()`. `src/rag.py` and `scripts/ask.py`: optional `theme` and `place` filters
+- `scripts/benchmark_filters.py`: filtered-search latency, and a check of whether filters hide or surface the expected article (`reports/filter_benchmark.json`)
+- Test suite: 221 tests in total across all weeks (30 new: 6 topic themes, 5 place utilities, 14 vector store filters, 5 filtered RAG)
+
+### Measured results
+
+All figures come from single runs on one machine (see `reports/`). Topic and NER accuracy were measured on small hand-checked samples, so every figure has a wide margin.
+
+**Topic modeling** (BERTopic 0.17.4 on per-document vectors)
+
+| Measure | Result |
+|---------|--------|
+| Documents | 6,960 (686 date and year pages set aside, 6,274 modeled) |
+| Topics found | 109 (size min 15, median 29, max 415) |
+| Outliers (topic -1) | 1,276 (18.3% of all documents) |
+| Documents with a broad theme | 4,998 (71.8%), in 25 themes |
+| Documents without a theme | 1,962 (28.2%): 1,276 outliers plus 686 date pages |
+| Chunks with a theme | 22,102 of 34,509 (64.0%). Date pages account for 7,392 chunks (21.4%) and outliers for 5,015 (14.5%) |
+
+- The first run, without the date rule, also gave 109 topics and 18.2% outliers, but titles such as "1323" and "October 23" were central members of the war, kings and actors topics. A title rule now sets those pages aside as "Dates and years".
+- Because date pages are long event lists, a theme filter searches only about two thirds of the index.
+
+**Manual validation of the themes**
+
+| Sample | Result |
+|--------|--------|
+| 50 random themed documents, lenient (borderline counted correct) | 48/50 = 96.0% (95% Wilson interval 86.5% to 98.9%) |
+| Same, strict (borderline counted wrong) | 41/50 = 82.0% (69.2% to 90.2%) |
+| Wrong theme (2) | Theatre of ancient Greece (put in Film, TV and anime), Christmas (put in Math, units and time) |
+| 10 random unclassified outliers | 5 clearly belonged to one of the 25 themes (for example September 11 attacks, Cervantes), 2 borderline, 3 genuine outliers |
+
+- Verdicts were proposed with the help of an AI assistant from each article's title and first 150 characters, and were not independently re-labelled. Treat them as an estimate, not an independent measurement. The labels are in `reports/theme_validation_labels.csv` and can be edited in `scripts/score_theme_validation.py`.
+
+**Named entity recognition** (spaCy `en_core_web_sm`, strict scoring: span and type must both be right)
+
+40 sentences, one per article, drawn with a fixed seed from non-date articles, containing 53 gold entities and 58 predictions.
+
+| Type | TP | FP | FN | Precision | Recall | F1 |
+|------|----|----|----|-----------|--------|----|
+| PERSON | 9 | 7 | 4 | 56.2% | 69.2% | 62.1% |
+| ORG | 6 | 12 | 3 | 33.3% | 66.7% | 44.4% |
+| GPE | 18 | 3 | 10 | 85.7% | 64.3% | 73.5% |
+| LOC | 2 | 1 | 1 | 66.7% | 66.7% | 66.7% |
+| All | 35 | 23 | 18 | 60.3% | 66.0% | 63.1% |
+
+- LOC rests on 3 gold entities, so it is not a measurement. The entity verdicts were proposed with an AI assistant from the sentence alone and were not independently checked.
+- ORG is often applied to places and products (Cumbria, Lancashire, Hackintosh), and PERSON to place names and software (Makkah, macOS). Only GPE was reliable enough to filter on, so **only GPE and LOC are stored as place metadata**.
+- Some documents still contain Wikipedia category lines (for example "1910 establishments in the United Kingdom"), which the Week 1 cleaning did not remove. They appear in at least 3 of the 40 sampled sentences and produce odd entity spans.
+- Place extraction covers the first 2,000 characters of each document. 5,383 of 6,960 documents (77.3%) have at least one place. After normalisation (`U.S.` and `USA` become `United States`, `UK` becomes `United Kingdom`, and `Earth`, `Middle Ages` and `Sun` are dropped), 28,782 of 34,509 chunks (83.4%) carry at least one place.
+
+**Metadata and filtered retrieval**
+
+Every chunk now stores `theme`, `topic_id`, `places` and five flat slots `place_1` to `place_5`. A place filter is an OR across the five slots. All 34,509 chunks were updated in place in 14.5 s, and the per-theme counts in the database were checked against the expected counts.
+
+Search latency, k=5, 10 repetitions per query, 12 queries (place rows use the 4 queries that have a place):
+
+| Search | n | p50 (ms) | p95 (ms) | Chunks matched by the filter |
+|--------|---|----------|----------|------------------------------|
+| Unfiltered | 120 | 7.44 | 14.32 | all 34,509 |
+| Theme | 120 | 20.03 | 28.37 | 447 to 1,957 |
+| Place | 40 | 33.43 | 40.45 | 134 to 4,268 |
+| Theme + place | 40 | 22.92 | 32.74 | 42 to 357 |
+
+- Filtered search was about 2.7x to 4.5x slower at p50, an extra 13 to 26 ms. This matches the Week 2 observation (27.8 ms filtered against 4.6 ms unfiltered). The cause was not investigated. The sample is too small to tell whether cost follows the number of matching chunks.
+- Effect on results, 12 questions with the correct theme (and place where it applies) chosen by hand: the expected article was in the top 5 both with and without the filter in 9 cases, only with the filter in 1 (Oliver Twist), and the filter never hid it. In 2 cases the expected article is not in the 7,000-article sample ("Neutron star", "Rhine"), so they are corpus gaps.
+- The top score was identical in 11 of the 12 cases, so the filter acts as a restriction ("search only this theme") and did not change the ranking in this test. This benchmark does not show filters improving precision.
+- Live checks with `scripts/ask.py`: "Who was Henry VIII?" with `--theme History --place England` returned status `ok` with 5 History sources that all mention England. A solar eclipse question restricted to Music scored 0.239 and was stopped by the relevance gate (no LLM call). An unknown theme returned a clear "no passages match" message without calling the LLM.
+
+### Approach and design decisions
+
+- **Topics per document, not per chunk:** topic modeling uses the mean of each document's chunk vectors, so nothing is re-embedded and the 6,960 documents are clustered instead of 34,509 chunks. The stored chunk embeddings were first checked against fresh embeddings of 30 random chunks (cosine 1.0000).
+- **Clustering setup:** UMAP (5 components, 15 neighbors, cosine, seed 42) then HDBSCAN (minimum cluster size 15, minimum samples 5). Topic keywords come from the first 3,000 characters of each document with English stop words and 1 to 2 word phrases.
+- **Date and year pages:** documents whose title is a year, a decade, a century or a month and day (for example "1323", "October 23") are set aside by a title rule, because they are event lists and polluted the topics.
+- **Broad themes:** the 109 topics contain near-duplicates (several music, war and football topics), so each topic id was mapped by hand to one of 25 themes, which are the values used for filtering. Unit tests check that every id from 0 to 108 is mapped exactly once.
+- **NER instead of sentiment:** Simple English Wikipedia is expected to be mostly neutral, so sentiment would make a weak evaluation (not measured). NER gives place filters, and the validation showed which entity types are usable.
+- **Place cleaning:** a leading "the" is removed, spans containing a newline or longer than 40 characters are dropped, the 5 most frequent places per document are kept, and aliases and a small stoplist are applied.
+- **Flat metadata:** values are stored as strings and ints with five place slots, and `build_where()` combines theme, topic id and place with AND, and the five place slots with OR.
+- **Safe updates:** `update_metadata()` changes metadata only, so vectors and text are untouched. The verification read pages through the collection 2,000 chunks at a time, because one read of all chunks exceeds a SQLite variable limit inside Chroma.
+- **Filter behavior in the pipeline:** an invalid filter returns `invalid_query` and a filter that matches nothing returns a clear message, both without calling the LLM. The relevance gate still applies to filtered searches.
+
+### Limitations
+
+- The theme and NER verdicts were proposed with an AI assistant and not independently re-labelled. The samples are small (50 themed documents, 10 outliers, 40 sentences with 53 gold entities), so intervals are wide.
+- 28.2% of documents (36.0% of chunks, because date pages are long) have no theme. Half of the sampled outliers clearly belonged to a theme, so "Unclassified" understates what could be labelled. Reassigning outliers to the nearest theme was not tried.
+- Themes are a manual mapping from topic ids and some are mixed: Film, TV and anime absorbed theatre, fiction and broadcasting, Math, units and time contains month pages, and one Europe topic is mostly Polish and Hungarian school stubs. The mapping belongs to the saved run, so re-running `run_topics.py` can change topic ids and break it.
+- Short documents and jargon were handled only for date and year pages. Disambiguation pages (for example "Halifax", "Queen Elizabeth") were not handled separately, and short documents were not analysed on their own.
+- Metadata is per document and copied to every chunk. Places come from the first 2,000 characters, so a chunk deep in a long article can carry places it does not mention and can miss places it does.
+- GPE recall was 64.3% in the NER sample, so a place filter misses documents. "America", "Britain" and "England" are not merged with "United States" or "United Kingdom". PERSON and ORG are not stored because their precision was too low.
+- Category lines from Wikipedia survive the Week 1 cleaning and add noise to NER and topic keywords.
+- Filter benchmark: 12 cases with correct filters chosen by hand and no test with a wrong filter. A filtered query can land close to the relevance gate (Oliver Twist scored 0.416 with the filter against a 0.40 threshold). Filtered search is slower and the cause is unknown.
+- Sentiment analysis was not implemented. The `topic_id` filter exists in `build_where()` but is not exposed in the pipeline or `ask.py`.
+- Rebuilding ChromaDB with `ingest_chroma.py --reset` removes the metadata, so run `enrich_chroma.py` again afterwards.
+
+### Reproduce Week 4
+
+```powershell
+python scripts\build_doc_embeddings.py   # -> data/processed/doc_embeddings.npy, doc_index.parquet
+python scripts\run_topics.py             # -> doc_topics.parquet, reports/topic_review.csv
+python scripts\build_doc_themes.py       # -> doc_themes.parquet, reports/theme_summary.csv
+python scripts\score_theme_validation.py # accuracy from reports/theme_validation_sample.csv
+python scripts\score_ner_validation.py   # precision and recall from reports/ner_validation_sample.csv
+python scripts\extract_places.py         # -> data/processed/doc_places.parquet
+python scripts\enrich_chroma.py          # writes the metadata into ChromaDB
+python scripts\ask.py "Who was Henry VIII?" --theme History --place England
+python scripts\benchmark_filters.py      # -> reports/filter_benchmark.json
+python -m pytest -q                      # 221 tests
+```
+
+Topic ids can differ if `run_topics.py` is re-run on another machine or library version, and `src/topic_themes.py` maps the ids of the saved run. Requires the Chroma database from the Week 2 steps and, for `ask.py`, the API key from Week 3.
 
 ## Project structure
 
@@ -229,11 +350,14 @@ data/raw/            raw downloads (git-ignored)
 data/processed/      corpus, chunks, embeddings (git-ignored)
 chroma_db/           persistent vector database (git-ignored)
 docs/                chunking_strategy.md
-reports/             embedding, ingest, retrieval benchmark, and RAG evaluation reports
+reports/             embedding, ingest, retrieval benchmark, RAG evaluation, topic, NER and filter reports
 scripts/             verify_env, download_data, inspect_raw, build_corpus,
                      build_chunks, embed_chunks, ingest_chroma, search_demo, list_llm_models, smoke_llm, ask, run_rag_eval,
+                     build_doc_embeddings, run_topics, build_doc_themes, sample_for_validation,
+                     score_theme_validation, sample_ner_validation, score_ner_validation,
+                     extract_places, enrich_chroma, benchmark_filters,
                      benchmark_retrieval
-src/                 preprocessing.py, chunking.py, vectorstore.py, llm_client.py, prompts.py, rag.py
+src/                 preprocessing.py, chunking.py, vectorstore.py, llm_client.py, prompts.py, rag.py, topic_themes.py, place_utils.py
 tests/               pytest suite
 ```
 
