@@ -264,7 +264,7 @@ All figures come from single runs on one machine (see `reports/`). Topic and NER
 | Wrong theme (2) | Theatre of ancient Greece (put in Film, TV and anime), Christmas (put in Math, units and time) |
 | 10 random unclassified outliers | 5 clearly belonged to one of the 25 themes (for example September 11 attacks, Cervantes), 2 borderline, 3 genuine outliers |
 
-- Verdicts were proposed with the help of an AI assistant from each article's title and first 150 characters, and were not independently re-labelled. Treat them as an estimate, not an independent measurement. The labels are in `reports/theme_validation_labels.csv` and can be edited in `scripts/score_theme_validation.py`.
+- Verdicts were first drafted with the help of an AI assistant from each article's title and first 150 characters, then reviewed and accepted without changes by me. They were not labelled independently of that draft, so treat them as an estimate, not an independent measurement. The labels are in `reports/theme_validation_labels.csv` and can be edited in `scripts/score_theme_validation.py`.
 
 **Named entity recognition** (spaCy `en_core_web_sm`, strict scoring: span and type must both be right)
 
@@ -278,7 +278,7 @@ All figures come from single runs on one machine (see `reports/`). Topic and NER
 | LOC | 2 | 1 | 1 | 66.7% | 66.7% | 66.7% |
 | All | 35 | 23 | 18 | 60.3% | 66.0% | 63.1% |
 
-- LOC rests on 3 gold entities, so it is not a measurement. The entity verdicts were proposed with an AI assistant from the sentence alone and were not independently checked.
+- LOC rests on 3 gold entities, so it is not a measurement. The entity verdicts were first drafted with an AI assistant from the sentence alone, then reviewed and accepted without changes by me, so they are not independent of that draft. The gold entities listed as missed come from the same review and cover only PERSON, ORG, GPE and LOC.
 - ORG is often applied to places and products (Cumbria, Lancashire, Hackintosh), and PERSON to place names and software (Makkah, macOS). Only GPE was reliable enough to filter on, so **only GPE and LOC are stored as place metadata**.
 - Some documents still contain Wikipedia category lines (for example "1910 establishments in the United Kingdom"), which the Week 1 cleaning did not remove. They appear in at least 3 of the 40 sampled sentences and produce odd entity spans.
 - Place extraction covers the first 2,000 characters of each document. 5,383 of 6,960 documents (77.3%) have at least one place. After normalisation (`U.S.` and `USA` become `United States`, `UK` becomes `United Kingdom`, and `Earth`, `Middle Ages` and `Sun` are dropped), 28,782 of 34,509 chunks (83.4%) carry at least one place.
@@ -315,16 +315,41 @@ Search latency, k=5, 10 repetitions per query, 12 queries (place rows use the 4 
 
 ### Limitations
 
-- The theme and NER verdicts were proposed with an AI assistant and not independently re-labelled. The samples are small (50 themed documents, 10 outliers, 40 sentences with 53 gold entities), so intervals are wide.
+- The theme and NER verdicts were first drafted with an AI assistant, then reviewed and accepted without changes by me. They were not labelled independently of that draft. The samples are small (50 themed documents, 10 outliers, 40 sentences with 53 gold entities), so intervals are wide.
 - 28.2% of documents (36.0% of chunks, because date pages are long) have no theme. Half of the sampled outliers clearly belonged to a theme, so "Unclassified" understates what could be labelled. Reassigning outliers to the nearest theme was not tried.
 - Themes are a manual mapping from topic ids and some are mixed: Film, TV and anime absorbed theatre, fiction and broadcasting, Math, units and time contains month pages, and one Europe topic is mostly Polish and Hungarian school stubs. The mapping belongs to the saved run, so re-running `run_topics.py` can change topic ids and break it.
-- Short documents and jargon were handled only for date and year pages. Disambiguation pages (for example "Halifax", "Queen Elizabeth") were not handled separately, and short documents were not analysed on their own.
+- Short documents were checked (see Additional checks): length did not significantly change the outlier rate, but documents under 200 characters were already removed in Week 1, and jargon was not tested. Disambiguation pages had a higher outlier rate (9 of 26), but that sample is too small to conclude anything, and they are not handled separately.
 - Metadata is per document and copied to every chunk. Places come from the first 2,000 characters, so a chunk deep in a long article can carry places it does not mention and can miss places it does.
 - GPE recall was 64.3% in the NER sample, so a place filter misses documents. "America", "Britain" and "England" are not merged with "United States" or "United Kingdom". PERSON and ORG are not stored because their precision was too low.
 - Category lines from Wikipedia survive the Week 1 cleaning and add noise to NER and topic keywords.
 - Filter benchmark: 12 cases with correct filters chosen by hand and no test with a wrong filter. A filtered query can land close to the relevance gate (Oliver Twist scored 0.416 with the filter against a 0.40 threshold). Filtered search is slower and the cause is unknown.
 - Sentiment analysis was not implemented. The `topic_id` filter exists in `build_where()` but is not exposed in the pipeline or `ask.py`.
 - Rebuilding ChromaDB with `ingest_chroma.py --reset` removes the metadata, so run `enrich_chroma.py` again afterwards.
+
+### Additional checks
+
+**Short documents and structural edge cases** (`scripts/analyze_edge_cases.py`, `reports/edge_case_analysis.csv`). Does a page become an unclassified outlier more often if it is short or unusual? Date and year pages are excluded because a title rule already sets them aside.
+
+| Group | Documents | Unclassified | Share |
+|-------|-----------|--------------|-------|
+| Under 400 characters | 565 | 117 | 20.7% |
+| 400 to 799 | 1,397 | 300 | 21.5% |
+| 800 to 1,499 | 1,449 | 305 | 21.0% |
+| 1,500 to 2,999 | 1,386 | 270 | 19.5% |
+| 3,000 or more | 1,477 | 284 | 19.2% |
+| Titles starting "List of" | 64 | 12 | 18.8% |
+| Titles with "(disambiguation)" | 26 | 9 | 34.6% |
+| All topical documents | 6,274 | 1,276 | 20.3% |
+
+- Under 800 characters, 21.3% were unclassified (n=1,962), against 19.9% for longer documents (n=4,312). The chi-square test gives p=0.237, so the difference is not significant. The median length is 1,265 characters for unclassified documents and 1,344 for themed ones.
+- Disambiguation pages were unclassified more often (9 of 26), but 26 documents are too few to conclude anything.
+- Limits: documents under 200 characters were already removed in Week 1, so very short pages are not in this test. Jargon was not tested.
+
+**Regression run of the Week 3 evaluation after the filter changes** (`reports/rag_eval_week4_regression.json`). The same 16 queries gave 16/16 passed: answerable 7/7, injection 1/1, not in corpus 3/3, off-topic 3/3, nonsense 2/2. There were 0 unsupported answers shown and 0 false withholds, and the top-score range was unchanged (lowest answerable 0.68, highest off-topic 0.471). The `rag.py` changes did not break the Week 3 behavior.
+
+- Latency in this run was higher than in Week 3: end to end for requests that called the LLM p50 1,420.7 ms and p95 1,918.0 ms (Week 3: 567.7 and 802.6), LLM call p50 733.7 ms (535.5), and retrieval p50 707.7 ms (29.2), n=16. The Week 3 figures above are the accepted ones and were not changed.
+- A standalone re-run of the Week 2 retrieval benchmark (`reports/retrieval_benchmark_week4.json`) gave total p50 16.41 ms (embedding 9.93, Chroma 6.52) against 13.32 ms (8.25, 5.18) in Week 2. The p95 rose from 16.79 to 46.18 ms because the last four queries ran about twice as slowly, in both embedding and search, which suggests a machine-wide slowdown during the run. This was not proven, and the cause of the slower evaluation run was not found. Latency figures from a single run on one laptop should be read with that in mind.
+- Filtered search was already slow before the metadata work: the Week 2 `title` filter benchmark took 27.8 ms against 4.6 ms unfiltered, and the re-run gave 27.82 ms against 6.43 ms. So the extra cost of filtered search was not caused by the Week 4 enrichment. Its cause is still unknown.
 
 ### Reproduce Week 4
 
@@ -338,6 +363,7 @@ python scripts\extract_places.py         # -> data/processed/doc_places.parquet
 python scripts\enrich_chroma.py          # writes the metadata into ChromaDB
 python scripts\ask.py "Who was Henry VIII?" --theme History --place England
 python scripts\benchmark_filters.py      # -> reports/filter_benchmark.json
+python scripts\analyze_edge_cases.py     # -> reports/edge_case_analysis.csv
 python -m pytest -q                      # 221 tests
 ```
 
