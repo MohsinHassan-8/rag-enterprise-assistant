@@ -298,7 +298,7 @@ Search latency, k=5, 10 repetitions per query, 12 queries (place rows use the 4 
 
 - Filtered search was about 2.7x to 4.5x slower at p50, an extra 13 to 26 ms. This matches the Week 2 observation (27.8 ms filtered against 4.6 ms unfiltered). The cause was not investigated. The sample is too small to tell whether cost follows the number of matching chunks.
 - Effect on results, 12 questions with the correct theme (and place where it applies) chosen by hand: the expected article was in the top 5 both with and without the filter in 9 cases, only with the filter in 1 (Oliver Twist), and the filter never hid it. In 2 cases the expected article is not in the 7,000-article sample ("Neutron star", "Rhine"), so they are corpus gaps.
-- The top score was identical in 11 of the 12 cases, so the filter acts as a restriction ("search only this theme") and did not change the ranking in this test. This benchmark does not show filters improving precision.
+- The top score was identical in 11 of the 12 cases, so the filter acts as a restriction ("search only this theme") and the best match kept the same score in those 11 cases (chunk ids and ranks 2 to 5 were not compared). This benchmark does not show filters improving precision.
 - Live checks with `scripts/ask.py`: "Who was Henry VIII?" with `--theme History --place England` returned status `ok` with 5 History sources that all mention England. A solar eclipse question restricted to Music scored 0.239 and was stopped by the relevance gate (no LLM call). An unknown theme returned a clear "no passages match" message without calling the LLM.
 
 ### Approach and design decisions
@@ -381,7 +381,7 @@ scripts/             verify_env, download_data, inspect_raw, build_corpus,
                      build_chunks, embed_chunks, ingest_chroma, search_demo, list_llm_models, smoke_llm, ask, run_rag_eval,
                      build_doc_embeddings, run_topics, build_doc_themes, sample_for_validation,
                      score_theme_validation, sample_ner_validation, score_ner_validation,
-                     extract_places, enrich_chroma, benchmark_filters,
+                     extract_places, enrich_chroma, benchmark_filters, analyze_edge_cases,
                      benchmark_retrieval
 src/                 preprocessing.py, chunking.py, vectorstore.py, llm_client.py, prompts.py, rag.py, topic_themes.py, place_utils.py
 tests/               pytest suite
