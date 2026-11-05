@@ -398,8 +398,6 @@ Topic ids can differ if `run_topics.py` is re-run on another machine or library 
 - **Concurrency:** requests are serialized with a lock, because it was not verified that the embedding model and Chroma client are safe to call from several threads at once.
 - **Startup:** the pipeline (embedding model, Chroma, LLM client) is loaded once at server start. Tests inject a fake pipeline instead.
 
-![Interactive API docs at /docs](docs/api_docs.png)
-
 ### Measured results
 
 All figures come from single runs on one laptop. The question sets were drafted with an AI assistant from article titles in the corpus and reviewed by me. Relevance is judged by article title only, and the sets were not checked against article text, so treat the numbers as rough.
