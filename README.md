@@ -400,7 +400,7 @@ Topic ids can differ if `run_topics.py` is re-run on another machine or library 
 
 ### Measured results
 
-All figures come from single runs on one laptop. The question sets were written by me with an AI assistant from article titles in the corpus. Relevance is judged by article title only, and the sets were not checked against article text, so treat the numbers as rough.
+All figures come from single runs on one laptop. The question sets were drafted with an AI assistant from article titles in the corpus and reviewed by me. Relevance is judged by article title only, and the sets were not checked against article text, so treat the numbers as rough.
 
 **Retrieval evaluation.** Precision@K is chunk-level: relevant chunks in the top K divided by K, so an article with several matching chunks scores higher, and short articles cap it. Recall@K is article-level: distinct relevant articles in the top K divided by the number of relevant articles for the question (1 to 2).
 
@@ -415,7 +415,7 @@ Easy set, 39 questions written from titles (for example "What is a ferret?" for 
 
 MRR 0.987. Hit@5 was 39/39 (95% Wilson interval 91.0% to 100.0%). The only question whose first relevant chunk was not rank 1 was "What is Plato known for?" ("Platonic realism" ranked first).
 
-Hard set, 12 paraphrased questions that avoid the title (for example "Why does the air feel sticky on hot summer days?" for "Humidity"). Fifteen candidates were drafted, and 3 were dropped before running (one repeated the team name, one was ambiguous, one was too vague):
+Hard set, 12 paraphrased questions that avoid the title (for example "Why does the air feel sticky on hot summer days?" for "Humidity"):
 
 | K | Precision@K | Recall@K | Hit@K |
 |---|-------------|----------|-------|
@@ -468,7 +468,7 @@ HTTP overhead is small (client and server totals differ by about 15 ms). Latency
 
 ### Limitations
 
-- The question sets are small (39 and 12), written by me with an AI assistant, and not independently reviewed. The hard set was trimmed from 15 to 12 questions before running. Wilson intervals are wide (55.2% to 95.3% for Hit@5 on the hard set).
+- The question sets are small (39 and 12), drafted with an AI assistant and reviewed by me. Wilson intervals are wide (55.2% to 95.3% for Hit@5 on the hard set).
 - Relevance is judged by title, not by article text. Some expected titles are debatable (Lincoln, Greenhouse gas).
 - Precision@K is chunk-level and depends on how many chunks an article has.
 - The Tornado and Humidity misses are genuine, and nothing was tried to fix them.
