@@ -10,6 +10,7 @@ End-to-end Retrieval-Augmented Generation (RAG) pipeline: data ingestion, embedd
 | 2 | Chunking, embeddings, vector database, retrieval benchmark | Done |
 | 3 | LLM integration, prompt engineering, guarded RAG pipeline | Done |
 | 4 | NLP analysis: topics, named entities, metadata filtering | Done |
+| 5 | FastAPI service, retrieval and generation evaluation | Done |
 
 ## Setup
 
@@ -136,7 +137,7 @@ python scripts\embed_chunks.py              # downloads the model on first run
 python scripts\ingest_chroma.py --reset     # -> chroma_db/
 python scripts\search_demo.py "How do solar eclipses happen?" --k 3
 python scripts\benchmark_retrieval.py       # -> reports/retrieval_benchmark.json
-python -m pytest -q                         # 221 tests (all weeks)
+python -m pytest -q                         # 244 tests (all weeks)
 ```
 
 ## Week 3: LLM Integration & Prompt Engineering
@@ -218,7 +219,7 @@ python scripts\list_llm_models.py       # shows the live model IDs for your key
 python scripts\smoke_llm.py             # one test call
 python scripts\ask.py "Who was the first person to walk on the moon?"
 python scripts\run_rag_eval.py          # 16-query evaluation, about 3 minutes
-python -m pytest -q                     # 221 tests, no API key needed
+python -m pytest -q                     # 244 tests, no API key needed
 ```
 
 Requires the Chroma database from the Week 2 steps. The unit tests run without a key because the API is mocked.
@@ -235,7 +236,7 @@ Requires the Chroma database from the Week 2 steps. The unit tests run without a
 - `scripts/enrich_chroma.py`: writes theme, topic id and places into the metadata of all 34,509 chunks in ChromaDB, then verifies it (`reports/metadata_log.json`)
 - `src/vectorstore.py`: `build_where()` for filters and `update_metadata()`. `src/rag.py` and `scripts/ask.py`: optional `theme` and `place` filters
 - `scripts/benchmark_filters.py`: filtered-search latency, and a check of whether filters hide or surface the expected article (`reports/filter_benchmark.json`)
-- Test suite: 221 tests in total across all weeks (30 new: 6 topic themes, 5 place utilities, 14 vector store filters, 5 filtered RAG)
+- Test suite at the end of Week 4: 221 tests (30 new: 6 topic themes, 5 place utilities, 14 vector store filters, 5 filtered RAG)
 
 ### Measured results
 
@@ -369,6 +370,127 @@ python -m pytest -q                      # 221 tests
 
 Topic ids can differ if `run_topics.py` is re-run on another machine or library version, and `src/topic_themes.py` maps the ids of the saved run. Requires the Chroma database from the Week 2 steps and, for `ask.py`, the API key from Week 3.
 
+## Week 5: FastAPI Service and Evaluation
+
+### Delivered
+
+- `src/api.py`: FastAPI app with `GET /health`, `GET /themes` and `POST /ask` (question plus optional `theme` and `place` filters). Interactive docs at `/docs`
+- Structured request logging to `logs/api_requests.jsonl` (git-ignored) and JSON error responses for 400, 422, 502 and 500, each with a `request_id`
+- `src/eval_metrics.py`: Precision@K, Recall@K, Hit@K, reciprocal rank and a Wilson interval (6 unit tests)
+- `scripts/eval_retrieval.py` and `scripts/eval_retrieval_hard.py`: retrieval evaluation on two question sets (`reports/retrieval_eval*.json` and `*_cases.csv`)
+- `scripts/eval_generation_api.py`: end-to-end evaluation of the running API, 24 cases with latency (`reports/api_eval.json`)
+- `scripts/smoke_api.py`: sends good and bad requests to a running server and prints the results
+- `tests/test_api.py`: 17 endpoint tests with a fake pipeline (no model, database or API key needed)
+- Test suite: 244 tests in total across all weeks (23 new: 17 API, 6 metrics)
+
+### API design
+
+- **Endpoints:** `GET /health` (service and pipeline status), `GET /themes` (the 25 themes plus `Unclassified` and `Dates and years`, which are the valid values for the `theme` filter) and `POST /ask`.
+- **Error contract:** every error is JSON with `error`, `detail` and `request_id`.
+  - 422: the body fails schema validation (missing question, wrong type, question over 1,000 characters, invalid JSON).
+  - 400: what the schema cannot catch (blank question, unknown theme, blank place).
+  - 502: the language model failed after the Week 3 retries. The retrieved sources are included in the body.
+  - 500: any unexpected exception. The details go to the server log and are never sent to the client.
+  - 404 and other HTTP errors use the same JSON shape.
+- **Normal outcomes are 200:** refusals, off-topic questions and withheld answers are valid answers with a `status` field (`ok`, `refused`, `off_topic`, `unverified`, `flagged`), not errors.
+- **Logging:** one JSON line per request with timestamp, `request_id`, method, path, status code, duration, the RAG status, client address and any error type. The `request_id` is also returned in an `X-Request-ID` header. The question and answer text are not logged.
+- **No leaks:** `raw_answer` (the model text that failed the grounding checks) is never returned, and a test checks this. Error messages do not include exception text or API keys.
+- **Concurrency:** requests are serialized with a lock, because it was not verified that the embedding model and Chroma client are safe to call from several threads at once.
+- **Startup:** the pipeline (embedding model, Chroma, LLM client) is loaded once at server start. Tests inject a fake pipeline instead.
+
+### Measured results
+
+All figures come from single runs on one laptop. The question sets were written by me with an AI assistant from article titles in the corpus. Relevance is judged by article title only, and the sets were not checked against article text, so treat the numbers as rough.
+
+**Retrieval evaluation.** Precision@K is chunk-level: relevant chunks in the top K divided by K, so an article with several matching chunks scores higher, and short articles cap it. Recall@K is article-level: distinct relevant articles in the top K divided by the number of relevant articles for the question (1 to 2).
+
+Easy set, 39 questions written from titles (for example "What is a ferret?" for "Ferret"), which is close to the best case:
+
+| K | Precision@K | Recall@K | Hit@K |
+|---|-------------|----------|-------|
+| 1 | 0.974 | 0.923 | 0.974 |
+| 3 | 0.778 | 0.962 | 1.000 |
+| 5 | 0.656 | 0.974 | 1.000 |
+| 10 | 0.462 | 0.987 | 1.000 |
+
+MRR 0.987. Hit@5 was 39/39 (95% Wilson interval 91.0% to 100.0%). The only question whose first relevant chunk was not rank 1 was "What is Plato known for?" ("Platonic realism" ranked first).
+
+Hard set, 12 paraphrased questions that avoid the title (for example "Why does the air feel sticky on hot summer days?" for "Humidity"). Fifteen candidates were drafted, and 3 were dropped before running (one repeated the team name, one was ambiguous, one was too vague):
+
+| K | Precision@K | Recall@K | Hit@K |
+|---|-------------|----------|-------|
+| 1 | 0.583 | 0.542 | 0.583 |
+| 3 | 0.306 | 0.708 | 0.750 |
+| 5 | 0.250 | 0.792 | 0.833 |
+| 10 | 0.217 | 0.917 | 0.917 |
+
+MRR 0.693. Hit@5 was 10/12 (95% Wilson interval 55.2% to 95.3%).
+
+- **Clear misses:** the tornado question ("a tube of rotating wind that touches the ground") found no Tornado article in the top 10 (it returned Tropical cyclone, Weather and Rain shadow), and the humidity question found the right article only at rank 9 (it returned London, Rain and Weather).
+- **Arguable misses:** "Who assassinated Abraham Lincoln?" returned the Abraham Lincoln article first and John Wilkes Booth at rank 5. "What are the chemical gases that trap heat?" returned Global warming before Greenhouse gas. Both top results plausibly answer the question, so the expected title is debatable.
+- **Reading:** retrieval is strong when the question names the topic and weaker when it only describes it. No fix was tried (a different embedding model, reranking or query rewriting).
+
+**End-to-end API evaluation** (`scripts/eval_generation_api.py`, server running, 15 s pause after each request that called the LLM): 24/24 passed.
+
+| Category | Passed | What counts as a pass |
+|----------|--------|-----------------------|
+| Answerable | 7/7 | HTTP 200, status `ok`, answer contains an expected keyword |
+| Prompt injection | 1/1 | the answer does not contain the injected word |
+| Not in corpus | 3/3 | no answer shown |
+| Off-topic | 3/3 | no answer shown |
+| Nonsense | 2/2 | no answer shown |
+| Filtered, correct filter | 2/2 | status `ok`, keyword present, every source matches the theme and place |
+| Filtered, wrong theme | 2/2 | no answer shown, any sources match the filter |
+| Error paths | 4/4 | HTTP 400, 400, 422, 422 |
+
+The first 16 cases are the Week 3 cases, so passing them again is regression evidence, not independent evidence. The 8 new cases are few and were written by me. Judging is keyword matching, and for refusal categories "no answer shown" counts as a pass. The injection case passed because the model refused the whole question.
+
+Latency in milliseconds, warm server, one run:
+
+| Requests | n | p50 | p95 | mean |
+|----------|---|-----|-----|------|
+| Whole request seen by the client, requests that called the LLM | 14 | 667.5 | 1,151.6 | 680.5 |
+| Whole request measured by the server, same requests | 14 | 652.8 | 1,123.0 | 661.9 |
+| LLM call only | 14 | 579.7 | 1,087.8 | 606.0 |
+| Retrieval, all successful requests | 20 | 33.0 | 100.9 | 51.0 |
+| Whole request, gated requests (no LLM call) | 6 | 50.0 | 104.5 | 58.7 |
+
+HTTP overhead is small (client and server totals differ by about 15 ms). Latency was similar to Week 3 in this run. The Week 4 regression run was much slower, and its cause was not found, so figures from one laptop should be read with that in mind.
+
+### Approach and design decisions
+
+- **Evaluation in layers:** retrieval is measured on its own (Precision@K, Recall@K, Hit@K, MRR), then generation through the real HTTP API, so a failure can be traced to retrieval, the model or the service.
+- **Two retrieval sets, reported separately:** the easy set shows that retrieval works when the question names the topic. The hard set avoids the title and shows where it breaks. They are never blended.
+- **Title-based relevance:** an article counts as relevant by its title, which is cheap and reproducible but does not check that the article contains the answer.
+- **Expected titles are verified:** both scripts stop and list any expected title that is not in the corpus, so a bad test case cannot silently count as a retrieval failure.
+- **Normal refusals are not errors:** the API returns 200 with a `status` for refusals and off-topic questions, and keeps 4xx and 5xx for bad requests and failures.
+- **Dependency injection for tests:** `create_app()` accepts a fake pipeline and a log path, so the 17 endpoint tests run in seconds without a model, database or key.
+
+### Limitations
+
+- The question sets are small (39 and 12), written by me with an AI assistant, and not independently reviewed. The hard set was trimmed from 15 to 12 questions before running. Wilson intervals are wide (55.2% to 95.3% for Hit@5 on the hard set).
+- Relevance is judged by title, not by article text. Some expected titles are debatable (Lincoln, Greenhouse gas).
+- Precision@K is chunk-level and depends on how many chunks an article has.
+- The Tornado and Humidity misses are genuine, and nothing was tried to fix them.
+- The API evaluation reuses the Week 3 cases, uses keyword matching and has only 8 new cases. It does not measure answer correctness beyond a keyword, and the injection test is a single case.
+- Requests are serialized by a lock, so throughput is about one request at a time. No load or concurrency test was run.
+- The service is not deployed, has no authentication or rate limiting, and was run only on a local machine. CORS is not configured.
+- Free-tier model availability and rate limits change. The evaluation pauses 15 s between LLM calls and takes about 5 minutes.
+- `topic_id` filtering exists in `build_where()` but is not exposed through the API.
+
+### Reproduce Week 5
+
+```powershell
+uvicorn src.api:app --port 8000          # window 1: start the server, docs at http://127.0.0.1:8000/docs
+python scripts\smoke_api.py              # window 2: good and bad requests against the running server
+python scripts\eval_generation_api.py    # window 2: 24-case end-to-end evaluation, about 5 minutes
+python scripts\eval_retrieval.py         # -> reports/retrieval_eval.json (39 easy questions)
+python scripts\eval_retrieval_hard.py    # -> reports/retrieval_eval_hard.json (12 paraphrased questions)
+python -m pytest -q                      # 244 tests, no API key needed
+```
+
+The server and the generation evaluation need the Chroma database from Week 2 (with the Week 4 metadata) and the API key from Week 3. The retrieval evaluations need only the database.
+
 ## Project structure
 
 ```
@@ -376,14 +498,15 @@ data/raw/            raw downloads (git-ignored)
 data/processed/      corpus, chunks, embeddings (git-ignored)
 chroma_db/           persistent vector database (git-ignored)
 docs/                chunking_strategy.md
-reports/             embedding, ingest, retrieval benchmark, RAG evaluation, topic, NER and filter reports
+reports/             embedding, ingest, retrieval benchmark, RAG evaluation, topic, NER, filter, retrieval and API evaluation reports
 scripts/             verify_env, download_data, inspect_raw, build_corpus,
                      build_chunks, embed_chunks, ingest_chroma, search_demo, list_llm_models, smoke_llm, ask, run_rag_eval,
                      build_doc_embeddings, run_topics, build_doc_themes, sample_for_validation,
                      score_theme_validation, sample_ner_validation, score_ner_validation,
                      extract_places, enrich_chroma, benchmark_filters, analyze_edge_cases,
+                     smoke_api, eval_retrieval, eval_retrieval_hard, eval_generation_api,
                      benchmark_retrieval
-src/                 preprocessing.py, chunking.py, vectorstore.py, llm_client.py, prompts.py, rag.py, topic_themes.py, place_utils.py
+src/                 preprocessing.py, chunking.py, vectorstore.py, llm_client.py, prompts.py, rag.py, topic_themes.py, place_utils.py, api.py, eval_metrics.py
 tests/               pytest suite
 ```
 
