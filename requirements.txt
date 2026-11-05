@@ -26,6 +26,7 @@ datasets==5.1.0
 dill==0.4.1
 durationpy==0.11
 en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl#sha256=1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf8928f7c1a0fb85
+fastapi==0.162.0
 filelock==3.32.3
 flatbuffers==25.12.19
 frozenlist==1.8.0
@@ -112,6 +113,7 @@ spacy==3.8.16
 spacy-legacy==3.0.12
 spacy-loggers==1.0.5
 srsly==2.5.4
+starlette==1.10.0
 sympy==1.14.0
 tenacity==9.2.1
 thinc==8.3.13
