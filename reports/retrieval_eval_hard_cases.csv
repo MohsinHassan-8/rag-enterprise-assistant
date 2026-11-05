@@ -1,0 +1,13 @@
+﻿question,relevant,first_relevant_rank,top5_titles,top1_score
+Which instrument do luthiers build?,Luthier,1,Luthier | Violin | Lute | Lute | Luthier,0.679
+What do you call a disease that spreads quickly through a population?,Epidemic,1,Epidemic | Infection | Food | Pathogen | Germ theory of disease,0.633
+Which animal is a small wild cat with long ear tufts?,Caracal,1,Caracal | Lynx | Cat | Puma | Cat,0.565
+Why does the air feel sticky on hot summer days?,Humidity,9,London | Rain | Weather | Spring (season) | Cloud,0.561
+Who assassinated Abraham Lincoln?,John Wilkes Booth,5,Abraham Lincoln | June 3 | Abraham Lincoln | April 26 | John Wilkes Booth,0.703
+How did people hunt large sea animals for oil?,Whaling,2,North Sea | Whaling | Inuit | Whaling | Irish Sea,0.539
+What was the movement that started in 1917 and ended the Tsar's rule in Russia?,Russian Revolution | Vladimir Lenin,1,Russian Revolution | Soviet Union | War communism | Cold War | Russian Civil War,0.659
+What do bees make and who looks after the hives?,Beekeeping,1,Beekeeping | Honeycomb | Insect | Beekeeping | Asexual reproduction,0.668
+What are the chemical gases that trap heat in the atmosphere?,Greenhouse gas,2,Global warming | Greenhouse gas | Global warming | Carbon dioxide | Atmosphere of Earth,0.559
+Which Canadian prime minister served in the 1970s?,Pierre Trudeau,1,Pierre Trudeau | Pierre Trudeau | Stephen Harper | July 19 | Stephen Harper,0.669
+What is a tube of rotating wind that touches the ground?,Tornado,,Tropical cyclone | Weather | Rain shadow | Convection | Snake,0.404
+Which brain cell sends electrical signals?,Neuron,1,Neuron | Neuron | Neurotransmitter | Nerve | Brain,0.605
