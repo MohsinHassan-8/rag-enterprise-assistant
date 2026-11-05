@@ -1,0 +1,40 @@
+﻿question,relevant,first_relevant_rank,p_at_5,r_at_5,top5_titles,top1_score
+What is a chord in music?,Chord,1,0.4,1.0,Chord | Chord | Music | Music | Music theory,0.675
+What is nihilism?,Nihilism,1,1.0,1.0,Nihilism | Nihilism | Nihilism | Nihilism | Nihilism,0.766
+What is flash memory?,Flash memory,1,0.6,1.0,Flash memory | Flash memory | Memory card | Flash memory | Personal digital assistant,0.802
+What is an adjective?,Adjective,1,1.0,1.0,Adjective | Adjective | Adjective | Adjective | Adjective,0.683
+What is the Japanese tea ceremony?,Japanese tea ceremony,1,0.8,1.0,Japanese tea ceremony | Japanese tea ceremony | Japanese tea ceremony | Japanese tea ceremony | Matcha,0.766
+How does electricity work?,Electricity,1,1.0,1.0,Electricity | Electricity | Electricity | Electricity | Electricity,0.738
+What is the British Museum?,British Museum | Museum,1,0.8,1.0,British Museum | British Museum | Museum | British Museum | Shetland,0.701
+What was the California Gold Rush?,California Gold Rush,1,0.4,1.0,"California Gold Rush | California Gold Rush | California | San Francisco | Charlotte, North Carolina",0.742
+How do you play Monopoly?,Monopoly (game),1,1.0,1.0,Monopoly (game) | Monopoly (game) | Monopoly (game) | Monopoly (game) | Monopoly (game),0.702
+What is a harmonica?,Harmonica,1,0.6,1.0,Harmonica | Harp | Harmonica | Harmonica | Harp,0.766
+What is the game Tetris?,Tetris,1,0.8,1.0,Tetris | Tetris | Tetris | Tetris | Spelling bee,0.809
+What was the Russian Revolution?,Russian Revolution | Vladimir Lenin,1,0.4,0.5,Russian Revolution | Russian Revolution | Revolution | War communism | Soviet Union,0.724
+Who was Vladimir Lenin?,Vladimir Lenin | Russian Revolution,1,0.6,0.5,Vladimir Lenin | Vladimir Lenin | Leon Trotsky | Vladimir Lenin | Soviet Union,0.659
+Who was John Wilkes Booth?,John Wilkes Booth,1,0.8,1.0,John Wilkes Booth | Abraham Lincoln | John Wilkes Booth | John Wilkes Booth | John Wilkes Booth,0.656
+Who was Charles Manson?,Charles Manson,1,1.0,1.0,Charles Manson | Charles Manson | Charles Manson | Charles Manson | Charles Manson,0.717
+What is a neuron?,Neuron,1,0.6,1.0,Neuron | Neuron | Neuron | Nerve | Brain,0.731
+What is biodiversity?,Biodiversity,1,0.4,1.0,Biodiversity | Biodiversity | World Wide Fund for Nature | Ecosystem | Madeira,0.707
+What is a gorilla?,Gorilla,1,0.8,1.0,Gorilla | Gorilla | Gorilla | Gorilla | Dian Fossey,0.679
+What is Plato known for?,Plato,2,0.4,1.0,Platonic realism | Plato | Plato | The Republic | Aristotle,0.635
+Where is Nova Scotia?,Nova Scotia,1,0.4,1.0,Nova Scotia | Halifax | Nova Scotia | Bermuda | Halifax,0.739
+What is a greenhouse gas?,Greenhouse gas,1,0.4,1.0,Greenhouse gas | Carbon dioxide | Global warming | Greenhouse gas | Global warming,0.694
+What was the Winter War?,Winter War,1,0.2,1.0,Winter War | Cold War | War | Winter storm | Russian Civil War,0.622
+What is a ferret?,Ferret,1,1.0,1.0,Ferret | Ferret | Ferret | Ferret | Ferret,0.686
+Who was Anne of Cleves?,Anne of Cleves | Henry VIII,1,0.6,1.0,Anne of Cleves | Anne of Cleves | Anne Boleyn | Anne Boleyn | Henry VIII,0.724
+Where is Taiwan?,Taiwan,1,0.8,1.0,Taiwan | Taiwan | Taiwan | Taiwan | Political status of Taiwan,0.719
+What is a tornado?,Tornado,1,0.8,1.0,Tornado | Tornado | Tornado | Storm | Tornado,0.718
+Who is Elizabeth II?,Elizabeth II,1,0.6,1.0,Elizabeth II | Queen Elizabeth | Elizabeth II | Elizabeth II | Queen Elizabeth,0.669
+What is a caracal?,Caracal,1,0.8,1.0,Caracal | Caracal | Caracal | Caracal | Felidae,0.708
+How is pizza made?,Pizza,1,1.0,1.0,Pizza | Pizza | Pizza | Pizza | Pizza,0.693
+What is a submarine?,Submarine,1,0.8,1.0,Submarine | Submarine | Submarine | Submarine | Warship,0.786
+Who was Pierre Trudeau?,Pierre Trudeau,1,0.6,1.0,Pierre Trudeau | Pierre Trudeau | December 27 | Pierre Trudeau | April 7,0.68
+Who was Louis XII of France?,Louis XII,1,0.2,1.0,Louis XII | Louis XIII | France | Louis Bonaparte | February 15,0.685
+What is The Phantom of the Opera?,The Phantom of the Opera,1,0.2,1.0,The Phantom of the Opera | The Nose (opera) | Richard Wagner | The Nose (opera) | Opera house,0.523
+What is humidity?,Humidity,1,0.4,1.0,Humidity | Humidity | Water content | Tonga | Water vapor,0.795
+What is the Denver Broncos?,Denver Broncos,1,0.2,1.0,Denver Broncos | Denver | Cleveland Guardians | Denver | New England Patriots,0.662
+Who was James K. Polk?,James K. Polk,1,1.0,1.0,James K. Polk | James K. Polk | James K. Polk | James K. Polk | James K. Polk,0.728
+What is whaling?,Whaling,1,0.8,1.0,Whaling | Whaler | Whaling | Whaling | Whaling,0.76
+How do beekeepers keep bees?,Beekeeping,1,0.4,1.0,Beekeeping | Beekeeping | Honeycomb | Asexual reproduction | Insect,0.695
+What is the play Hamlet about?,Hamlet,1,1.0,1.0,Hamlet | Hamlet | Hamlet | Hamlet | Hamlet,0.69
