@@ -2,6 +2,54 @@
 
 End-to-end Retrieval-Augmented Generation (RAG) pipeline: data ingestion, embedding, vector search, grounded LLM answers, NLP analysis, and a FastAPI service. Built week by week; this README is updated with each submission.
 
+## Overview and quick start
+
+A Retrieval-Augmented Generation (RAG) assistant over a 7,000-article sample of Simple English Wikipedia. Questions are answered by an LLM only from retrieved passages, with citations, a relevance gate for off-topic questions and checks on the answer. It is served through a FastAPI endpoint, and optional theme and place filters (from topic modeling and named-entity recognition) narrow the search.
+
+Check that the code works (no GPU, database or API key needed, because the tests use fakes):
+
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install torch --index-url https://download.pytorch.org/whl/cu126
+pip install -r requirements.txt
+python -m pytest -q
+```
+
+Running the real system needs the data pipeline first, because data and the vector database are not in the repository. See Reproduce from scratch. What was measured, and how far to trust it, is in Results summary and in the weekly sections.
+
+## Architecture
+
+```mermaid
+flowchart TD
+    subgraph Offline["Offline pipeline (run once)"]
+        A["Simple English Wikipedia<br/>7,000 articles"] --> B["Clean and filter<br/>src/preprocessing.py"]
+        B --> C["6,960 documents"]
+        C --> D["Chunk, 800 chars with 100 overlap<br/>src/chunking.py"]
+        D --> E["Embed with all-MiniLM-L6-v2<br/>384 dimensions"]
+        E --> F[("ChromaDB<br/>34,509 chunks, cosine")]
+        C --> G["BERTopic themes and spaCy places"]
+        G -- "theme and place metadata" --> F
+    end
+    subgraph Online["Request path (FastAPI, src/api.py)"]
+        Q["POST /ask<br/>question, optional theme and place"] --> V["Validate request<br/>400 or 422 on bad input"]
+        V --> R["Embed question and search top 5<br/>with optional filters"]
+        F --> R
+        R --> Gate{"Best score at least 0.40?"}
+        Gate -- "no" --> OFF["status off_topic<br/>LLM is not called"]
+        Gate -- "yes" --> L["LLM (Groq, gpt-oss-20b)<br/>numbered sources, fixed refusal rule"]
+        L -- "fails after retries" --> E502["502 with the retrieved sources"]
+        L --> CHK["Citation and grounding checks"]
+        CHK --> OUT["200: ok, refused or unverified<br/>answer, sources, latency"]
+    end
+```
+
+The same flow in words:
+
+1. **Offline:** raw articles are cleaned, split into overlapping chunks, embedded and stored in ChromaDB. Topic modeling and named-entity recognition add `theme` and place metadata to every chunk.
+2. **Online:** a question is embedded and the 5 nearest chunks are retrieved, optionally restricted to a theme and a place. If the best similarity is below 0.40 the model is never called. Otherwise the model answers from the numbered sources only, and the answer is checked for valid citations and lexical support before it is returned.
+3. **Service:** every response carries a `request_id`, errors are JSON, and one log line per request goes to `logs/api_requests.jsonl`.
+
 ## Progress
 
 | Week | Focus | Status |
@@ -11,6 +59,7 @@ End-to-end Retrieval-Augmented Generation (RAG) pipeline: data ingestion, embedd
 | 3 | LLM integration, prompt engineering, guarded RAG pipeline | Done |
 | 4 | NLP analysis: topics, named entities, metadata filtering | Done |
 | 5 | FastAPI service, retrieval and generation evaluation | Done |
+| 6 | Documentation, benchmarks, reproducibility | Done |
 
 ## Setup
 
@@ -25,6 +74,108 @@ python -m spacy download en_core_web_sm
 ```
 
 Install torch first. Otherwise pip's resolver can backtrack to ancient `sentence-transformers` versions and fail on Python 3.12.
+
+## Example queries
+
+### Command line
+
+```powershell
+python scripts\ask.py "Who was the first person to walk on the moon?"
+python scripts\ask.py "Who was Henry VIII?" --theme History --place England
+```
+
+Real output of the first command (place column omitted):
+```
+status: ok | top score: 0.790 | sources used: 5
+answer: Neil Armstrong was the first person to walk on the moon. [1][2]
+  [1] Neil Armstrong (chunk 0) score 0.790 | Earth, space and weather
+  [2] Astronaut (chunk 0) score 0.649 | Earth, space and weather
+  [3] Buzz Aldrin (chunk 0) score 0.607 | Earth, space and weather
+```
+
+
+How different kinds of question behave (all seen in the evaluation runs):
+
+| Question | Filters | Status | What happens |
+|----------|---------|--------|--------------|
+| Who was the first person to walk on the moon? | none | `ok` | Cited answer from the retrieved sources |
+| Who was Henry VIII? | theme History, place England | `ok` | Cited answer, every source matches both filters |
+| Who composed The Magic Flute? | none | `refused` | The model replies "I could not find this in the provided sources." (the article is not in the 7,000-article sample) |
+| kubernetes pod autoscaling configuration | none | `off_topic` | Best score 0.315 is below 0.40, so the model is not called |
+| Who was Henry VIII? | theme Sports | `off_topic` | The filter leaves only weak matches, so the relevance gate stops it |
+| asdfgh qwerty zxcvb | none | `off_topic` | Nonsense, stopped by the relevance gate |
+
+### HTTP API
+
+```powershell
+uvicorn src.api:app --port 8000      # interactive docs at http://127.0.0.1:8000/docs
+python scripts\smoke_api.py          # sends good and bad requests and prints the results
+```
+
+`POST /ask` takes `{"question": "...", "theme": "History", "place": "England"}` (`theme` and `place` are optional; `GET /themes` lists valid themes). A 200 response contains `request_id`, `question`, `status`, `answer`, `sources`, `citations`, `warnings`, `top_score`, `filters`, `latency_ms` and `usage`. Errors share one shape, `{"error": "...", "detail": "...", "request_id": "..."}`:
+
+| Case | HTTP status |
+|------|-------------|
+| Blank question, unknown theme, blank place | 400 |
+| Missing field, wrong type, question over 1,000 characters, invalid JSON | 422 |
+| Unknown path | 404 |
+| Language model failed after retries (sources included) | 502 |
+| Unexpected server error (details are logged, never returned) | 500 |
+
+## Results summary
+
+One table for everything measured in Weeks 2 to 5. The Week sections above give the method and the limits of each figure. All numbers come from single runs on one laptop (GTX 1650), from the question sets and samples described there, and the samples are small.
+
+| Area | Measure | Result |
+|------|---------|--------|
+| Corpus | Documents after cleaning | 6,960 of 7,000 |
+| Chunking | Chunks indexed | 34,509 (median 146 tokens; 151 chunks, 0.44%, exceed the 256-token model limit) |
+| Embedding | Time for all chunks | 132.8 s (260 chunks/s) |
+| ChromaDB | Ingest time and size | 33.2 s, 226 MB |
+| Retrieval latency | Total p50 / p95, k=5 (Week 2) | 13.32 ms / 16.79 ms |
+| Retrieval latency | Same benchmark re-run in Week 4 | 16.41 ms / 46.18 ms (a machine-wide slowdown during the run is suspected, not proven) |
+| Retrieval quality, easy set | 39 questions written from titles | Hit@5 39/39 (95% interval 91.0% to 100.0%), MRR 0.987, Precision@5 0.656, Recall@5 0.974 |
+| Retrieval quality, hard set | 12 paraphrased questions | Hit@5 10/12 (55.2% to 95.3%), MRR 0.693, Precision@5 0.250, Recall@5 0.792 |
+| Generation, Week 3 | 16 hand-written cases | 16/16 passed |
+| Generation, through the API | 24 cases including filters and error paths | 24/24 passed |
+| Hallucination checks | Unsupported answers shown, false withholds | 0 and 0 in both runs (a smoke test, not a hallucination rate) |
+| End-to-end latency | p50 / p95, requests that called the LLM | 567.7 ms / 802.6 ms (Week 3, n=12); 667.5 ms / 1,151.6 ms (API run, n=14) |
+| Gated requests | p50 through the API, no LLM call | 50.0 ms (n=6) |
+| Topics | Topics found, themes, documents with a theme | 109 topics, 25 themes, 71.8% of documents |
+| Theme accuracy | 50 documents checked by hand | 96.0% lenient (86.5% to 98.9%), 82.0% strict (69.2% to 90.2%) |
+| NER | 40 sentences, 53 gold entities, strict scoring | All types precision 60.3%, recall 66.0%, F1 63.1%. GPE precision 85.7%, recall 64.3%. ORG precision 33.3% |
+| Filtered search | p50, k=5 | Unfiltered 7.44 ms, theme 20.03 ms, place 33.43 ms, theme and place 22.92 ms |
+| Tests | pytest | 244 passed |
+
+Retrieval quality is strong when the question names the topic and weaker when it only describes it (the Tornado and Humidity questions in the hard set are the clear misses). The answer-quality checks rely on keyword matching and small hand-written sets, so they show the guardrails work on these cases, not that the system never hallucinates.
+
+## Reproduce from scratch
+
+Requirements: Python 3.12, an NVIDIA GPU with a current driver (`scripts/verify_env.py` fails without CUDA; the other scripts pick the CPU automatically but were only run on a GPU), and a free Groq API key. Do the Setup steps above first, then:
+
+```powershell
+python scripts\verify_env.py
+python scripts\download_data.py                # raw articles -> data/raw/
+python scripts\build_corpus.py                 # -> data/processed/clean_corpus.parquet
+python scripts\build_chunks.py                 # -> data/processed/chunks.parquet
+python scripts\embed_chunks.py                 # embeddings (downloads the model on first run)
+python scripts\ingest_chroma.py --reset        # -> chroma_db/
+python scripts\build_doc_embeddings.py         # Week 4: one vector per document
+python scripts\run_topics.py                   # Week 4: BERTopic
+python scripts\build_doc_themes.py             # Week 4: topics -> 25 themes
+python scripts\extract_places.py               # Week 4: place entities
+python scripts\enrich_chroma.py                # Week 4: writes metadata into ChromaDB
+copy .env.example .env                         # then fill in LLM_API_KEY and LLM_MODEL
+python scripts\list_llm_models.py              # shows which model IDs your key can use
+python scripts\ask.py "Who was the first person to walk on the moon?"
+uvicorn src.api:app --port 8000
+python -m pytest -q                            # 244 tests, no API key needed
+```
+
+- The unit tests need no database, model or key. Everything else needs the steps above.
+- **Topic ids can change.** `src/topic_themes.py` maps the topic ids of the saved run to the 25 themes. A fresh `run_topics.py` on another machine or library version can produce different ids, which would make the theme names wrong. Place filters do not depend on this.
+- `ingest_chroma.py --reset` removes the metadata, so run `enrich_chroma.py` again afterwards.
+- Free-tier model IDs and rate limits change. Check `list_llm_models.py` before running.
 
 ## Week 1: Environment, Data Ingestion & Preprocessing
 
@@ -490,6 +641,22 @@ python -m pytest -q                      # 244 tests, no API key needed
 ```
 
 The server and the generation evaluation need the Chroma database from Week 2 (with the Week 4 metadata) and the API key from Week 3. The retrieval evaluations need only the database.
+
+## Week 6: Documentation, Benchmarks and Launch
+
+### Delivered
+
+- Docstrings and type hints across `src/` and `scripts/`. A read-only audit script (Python `ast`) counted 118 functions. Before: 86 had no docstring, 54 no return annotation, 36 a parameter without an annotation, and `src/__init__.py` had no module docstring. After: 0 missing docstrings, 0 unannotated parameters and 0 missing module docstrings.
+- 4 return annotations were deliberately left out (`timed`, `median_ms`, `clean_place` and the nested `prf`), because their return types were not verified.
+- The 244 tests still pass after the changes, all of `src/` and `scripts/` compiles, and the edited scripts were run (`verify_env.py`, `ask.py`, and `--help` on the API scripts).
+- README: architecture diagram, example queries with real output, one results table for Weeks 2 to 5, and a from-scratch reproduction section. The weekly sections are kept unchanged, so every measured figure and its limits are still there.
+
+### Limitations
+
+- The type hints were not checked with a type checker such as mypy. Some parameters use `Any` (the ChromaDB collection, the pipeline objects) instead of precise types.
+- Most script docstrings are one line. The audit counts that a docstring exists, not how good it is, and it covers `src/` and `scripts/`, not `tests/`.
+- A full rebuild from scratch can change topic ids and break the theme mapping (see Reproduce from scratch).
+- The service runs locally only. It is not deployed and has no authentication.
 
 ## Project structure
 
