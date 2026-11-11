@@ -7,6 +7,7 @@ import argparse
 import json
 import sys
 import time
+from collections.abc import Sequence
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,7 +17,7 @@ sys.path.insert(0, str(ROOT))
 
 import numpy as np
 
-from src.rag import RAGConfig, build_default_pipeline
+from src.rag import RAGConfig, RAGResponse, build_default_pipeline
 from src.vectorstore import search
 
 OUT_PATH = ROOT / "reports" / "rag_eval.json"
@@ -48,7 +49,7 @@ GATED_CATEGORIES = ("not_in_corpus", "off_topic", "nonsense")
 CALIBRATION_CATEGORIES = ("off_topic", "nonsense")
 
 
-def judge(category, keywords, resp):
+def judge(category: str, keywords: list[str], resp: RAGResponse) -> tuple[bool, str | None]:
     """Return (passed, failure_reason)."""
     if resp.status == "llm_error":
         return False, "llm_error"
@@ -73,11 +74,13 @@ def judge(category, keywords, resp):
     return True, None
 
 
-def pct(values, p):
+def pct(values: Sequence[float], p: float) -> float | None:
+    """p-th percentile rounded to 1 decimal, or None for an empty list."""
     return round(float(np.percentile(values, p)), 1) if values else None
 
 
-def stats(values):
+def stats(values: Sequence[float]) -> dict:
+    """Count, p50, p95 and mean of a list of latencies in milliseconds."""
     return {
         "n": len(values),
         "p50": pct(values, 50),
@@ -87,6 +90,7 @@ def stats(values):
 
 
 def main() -> None:
+    """Run every case through the pipeline, judge it, print the summary and save the JSON report."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--pause", type=float, default=15.0,
                         help="seconds to wait after each request that called the LLM")

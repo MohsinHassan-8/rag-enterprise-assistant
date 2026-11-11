@@ -19,7 +19,8 @@ OUTLIER_MISS = [53, 56, 58, 59, 60]
 OUTLIER_BORDERLINE = [51, 52]
 
 
-def wilson(k, n, z=1.96):
+def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
+    """Wilson score interval (low, high) for k successes out of n. z=1.96 gives 95%."""
     p = k / n
     d = 1 + z * z / n
     c = (p + z * z / (2 * n)) / d
@@ -27,14 +28,16 @@ def wilson(k, n, z=1.96):
     return c - m, c + m
 
 
-def main():
+def main() -> None:
+    """Turn the verdict lists into labels, save them, and print accuracy with confidence intervals."""
     assert all(1 <= n <= 50 for n in WRONG + BORDERLINE), "themed numbers must be 1-50"
     assert all(51 <= n <= 60 for n in OUTLIER_MISS + OUTLIER_BORDERLINE), "outlier numbers must be 51-60"
     assert not set(WRONG) & set(BORDERLINE)
 
     s = pd.read_csv(REPORTS / "theme_validation_sample.csv", encoding="utf-8-sig")
 
-    def verdict(r):
+    def verdict(r: pd.Series) -> str:
+        """Return the verdict label for one sample row."""
         n = int(r["n"])
         if r["group"] == "themed":
             if n in WRONG:

@@ -7,6 +7,7 @@ import json
 import sys
 import time
 from collections import defaultdict
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -54,11 +55,13 @@ QUERIES = [
 K_SWEEP = (1, 5, 10, 20, 50)
 
 
-def pct(values, p: float) -> float:
+def pct(values: Sequence[float], p: float) -> float:
+    """p-th percentile of values, rounded to 2 decimals."""
     return round(float(np.percentile(values, p)), 2)
 
 
-def summarize(values) -> dict:
+def summarize(values: Sequence[float]) -> dict:
+    """p50, p95, p99 and mean of a list of latencies in milliseconds."""
     return {
         "p50": pct(values, 50),
         "p95": pct(values, 95),
@@ -68,11 +71,13 @@ def summarize(values) -> dict:
 
 
 def sync(device: str) -> None:
+    """Wait for queued GPU work so timings are not read too early. Does nothing on CPU."""
     if device == "cuda":
         torch.cuda.synchronize()
 
 
 def main() -> None:
+    """Run the latency benchmark and relevance smoke check, print the results and save the JSON report."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--reps", type=int, default=20, help="repetitions per query")
     parser.add_argument("--k", type=int, default=5)
@@ -163,7 +168,8 @@ def main() -> None:
     q_vec = vecs[0]
     title = search(collection, q_vec, n_results=1)[0]["metadata"]["title"]
 
-    def time_search(where):
+    def time_search(where: dict | None) -> tuple[list[dict], list[float]]:
+        """Run the search args.reps times with the given filter. Returns (last result, times in ms)."""
         times, res = [], []
         for _ in range(args.reps):
             t0 = time.perf_counter()

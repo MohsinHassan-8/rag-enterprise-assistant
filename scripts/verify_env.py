@@ -19,6 +19,7 @@ REQUIRED_IMPORTS = [
 
 
 def check_imports() -> list[str]:
+    """Import every required package, print PASS or FAIL for each, and return the failed names."""
     failures = []
     for name in REQUIRED_IMPORTS:
         try:
@@ -32,6 +33,7 @@ def check_imports() -> list[str]:
 
 
 def check_spacy_model() -> bool:
+    """True if the spaCy model en_core_web_sm loads."""
     try:
         import spacy
 
@@ -44,6 +46,7 @@ def check_spacy_model() -> bool:
 
 
 def check_cuda() -> bool:
+    """True if torch can see a CUDA GPU. Prints the device name and memory."""
     try:
         import torch
 
@@ -60,6 +63,7 @@ def check_cuda() -> bool:
 
 
 def main() -> int:
+    """Run all checks. Returns 0 if everything passed and 1 otherwise."""
     print(f"Python {sys.version.split()[0]}")
     failed_imports = check_imports()
     spacy_ok = check_spacy_model()
