@@ -1,15 +1,17 @@
 """Retrieval evaluation metrics (Week 5). Titles identify articles."""
 import math
+from collections.abc import Iterable, Sequence
 
 
-def _rel(relevant):
+def _rel(relevant: Iterable[str]) -> set[str]:
+    """Return the relevant items as a set. An empty collection is rejected."""
     rel = set(relevant)
     if not rel:
         raise ValueError("relevant must not be empty")
     return rel
 
 
-def precision_at_k(retrieved, relevant, k):
+def precision_at_k(retrieved: Sequence[str], relevant: Iterable[str], k: int) -> float:
     """Share of the k result slots that hold a relevant item. Divides by k, not by len(retrieved)."""
     if k <= 0:
         raise ValueError("k must be positive")
@@ -17,7 +19,7 @@ def precision_at_k(retrieved, relevant, k):
     return sum(1 for t in retrieved[:k] if t in rel) / k
 
 
-def recall_at_k(retrieved, relevant, k):
+def recall_at_k(retrieved: Sequence[str], relevant: Iterable[str], k: int) -> float:
     """Share of the relevant items that appear at least once in the top k."""
     if k <= 0:
         raise ValueError("k must be positive")
@@ -25,14 +27,16 @@ def recall_at_k(retrieved, relevant, k):
     return len({t for t in retrieved[:k] if t in rel}) / len(rel)
 
 
-def hit_at_k(retrieved, relevant, k):
+def hit_at_k(retrieved: Sequence[str], relevant: Iterable[str], k: int) -> bool:
+    """True if at least one relevant item appears in the top k."""
     if k <= 0:
         raise ValueError("k must be positive")
     rel = _rel(relevant)
     return any(t in rel for t in retrieved[:k])
 
 
-def reciprocal_rank(retrieved, relevant):
+def reciprocal_rank(retrieved: Sequence[str], relevant: Iterable[str]) -> float:
+    """1 divided by the rank of the first relevant item, or 0.0 if none was retrieved."""
     rel = _rel(relevant)
     for i, t in enumerate(retrieved, start=1):
         if t in rel:
@@ -40,7 +44,8 @@ def reciprocal_rank(retrieved, relevant):
     return 0.0
 
 
-def wilson(successes, n, z=1.96):
+def wilson(successes: int, n: int, z: float = 1.96) -> tuple[float, float]:
+    """Wilson score interval (low, high) for successes out of n. z=1.96 gives 95%."""
     if n <= 0:
         raise ValueError("n must be positive")
     p = successes / n

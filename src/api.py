@@ -13,11 +13,13 @@ import logging
 import threading
 import time
 import uuid
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -67,13 +69,15 @@ class AskResponse(BaseModel):
     usage: dict = {}
 
 
-def _error(status_code, error, detail, request_id, **extra):
+def _error(status_code: int, error: str, detail: Any, request_id: str | None, **extra: Any) -> JSONResponse:
+    """Build a JSON error response with the shared shape: error, detail, request_id and any extras."""
     body = {"error": error, "detail": detail, "request_id": request_id}
     body.update(extra)
     return JSONResponse(status_code=status_code, content=body)
 
 
-def _write_log(path, record):
+def _write_log(path: Path | str | None, record: dict) -> None:
+    """Append one JSON line to path. Does nothing if path is None and ignores I/O errors."""
     if path is None:
         return
     try:
@@ -84,16 +88,22 @@ def _write_log(path, record):
         pass  # logging must never break answering
 
 
-def _default_factory():
+def _default_factory() -> Any:
+    """Load the real RAG pipeline. The import is lazy so tests do not need the model."""
     from src.rag import build_default_pipeline
     return build_default_pipeline()
 
 
-def create_app(pipeline=None, pipeline_factory=None, log_path=DEFAULT_API_LOG) -> FastAPI:
+def create_app(
+    pipeline: Any = None,
+    pipeline_factory: Callable[[], Any] | None = None,
+    log_path: Path | str | None = DEFAULT_API_LOG,
+) -> FastAPI:
     """Build the app. Pass a pipeline (tests) or let the lifespan load the real one."""
 
     @asynccontextmanager
-    async def lifespan(app):
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        """Load the pipeline once at startup unless one was injected."""
         if app.state.pipeline is None:
             app.state.pipeline = (pipeline_factory or _default_factory)()
         yield
@@ -109,7 +119,10 @@ def create_app(pipeline=None, pipeline_factory=None, log_path=DEFAULT_API_LOG) -
     app.state.lock = threading.Lock()  # one pipeline call at a time
 
     @app.middleware("http")
-    async def log_requests(request: Request, call_next):
+    async def log_requests(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        """Assign a request id, turn unexpected errors into a 500, add X-Request-ID and log one JSON line."""
         rid = uuid.uuid4().hex[:12]
         request.state.request_id = rid
         request.state.rag_status = None
@@ -136,25 +149,34 @@ def create_app(pipeline=None, pipeline_factory=None, log_path=DEFAULT_API_LOG) -
         return response
 
     @app.exception_handler(RequestValidationError)
-    async def on_validation_error(request: Request, exc: RequestValidationError):
+    async def on_validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+        """Return schema validation failures as a 422 JSON error."""
         problems = [{"field": ".".join(str(p) for p in e["loc"] if p != "body") or "body",
                      "message": e["msg"]} for e in exc.errors()]
         return _error(422, "validation_error", problems, getattr(request.state, "request_id", None))
 
     @app.exception_handler(StarletteHTTPException)
-    async def on_http_error(request: Request, exc: StarletteHTTPException):
+    async def on_http_error(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+        """Give HTTP errors such as 404 the same JSON shape as other errors."""
         return _error(exc.status_code, "http_error", exc.detail, getattr(request.state, "request_id", None))
 
     @app.get("/health", tags=["meta"])
-    def health():
+    def health() -> dict[str, Any]:
+        """Report service status and whether the pipeline is loaded."""
         return {"status": "ok", "pipeline_loaded": app.state.pipeline is not None}
 
     @app.get("/themes", tags=["meta"])
-    def themes():
+    def themes() -> dict[str, list[str]]:
+        """List the valid values for the theme filter."""
         return {"themes": KNOWN_THEMES}
 
     @app.post("/ask", response_model=AskResponse, tags=["rag"])
-    def ask(body: AskRequest, request: Request):
+    def ask(body: AskRequest, request: Request) -> AskResponse | JSONResponse:
+        """Answer a question from the knowledge base, optionally filtered by theme and place.
+
+        Refusals and off-topic questions are normal 200 answers with a status field.
+        Returns 400 for bad filters or a blank question and 502 if the language model fails.
+        """
         rid = request.state.request_id
         theme = body.theme
         place = body.place.strip() if body.place is not None else None

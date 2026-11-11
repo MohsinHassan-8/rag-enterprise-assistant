@@ -38,6 +38,7 @@ def clean_question(question: str | None, max_chars: int = MAX_QUESTION_CHARS) ->
 
 
 def format_source(number: int, hit: dict) -> str:
+    """Format one retrieved chunk as "[number] Title (chunk i)" followed by its text."""
     meta = hit.get("metadata") or {}
     title = meta.get("title") or "Untitled"
     index = meta.get("chunk_index")
@@ -93,6 +94,7 @@ def build_messages(
 
 
 def _normalize(text: str) -> str:
+    """Lowercase, drop citation markers and punctuation, and collapse whitespace."""
     text = _CITATION_RE.sub("", text.lower())
     return " ".join(re.sub(r"[^a-z0-9 ]", " ", text).split())
 

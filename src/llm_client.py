@@ -9,7 +9,7 @@ from __future__ import annotations
 import random
 import re
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 import httpx
@@ -44,7 +44,8 @@ class LLMBadResponseError(LLMError):
 class LLMRateLimitError(LLMError):
     """429 that persisted through all retries, or needs a wait longer than max_retry_wait."""
 
-    def __init__(self, message: str, retry_after: float | None = None):
+    def __init__(self, message: str, retry_after: float | None = None) -> None:
+        """Store the number of seconds the provider asked us to wait, if known."""
         super().__init__(message)
         self.retry_after = retry_after
 
@@ -96,6 +97,7 @@ def retry_hint_seconds(message: str) -> float | None:
 
 
 def _retry_after_header(value: str | None) -> float | None:
+    """Parse a Retry-After header given in seconds. Returns None if absent or invalid."""
     if not value:
         return None
     try:
@@ -106,6 +108,7 @@ def _retry_after_header(value: str | None) -> float | None:
 
 
 def _error_message(resp: httpx.Response) -> str:
+    """Extract the provider error message from a response, or the first 300 characters of the body."""
     try:
         err = resp.json().get("error")
         if isinstance(err, dict) and err.get("message"):
@@ -117,6 +120,8 @@ def _error_message(resp: httpx.Response) -> str:
 
 @dataclass
 class LLMResult:
+    """One successful chat completion with token usage and timing."""
+
     text: str
     model: str
     finish_reason: str | None
@@ -130,6 +135,8 @@ class LLMResult:
 
 
 class LLMClient:
+    """Chat client with timeouts, retries with backoff and typed errors."""
+
     def __init__(
         self,
         api_key: str,
@@ -142,8 +149,13 @@ class LLMClient:
         max_retry_wait: float = 60.0,
         jitter: float = 0.1,
         transport: httpx.BaseTransport | None = None,
-        sleep=time.sleep,
-    ):
+        sleep: Callable[[float], None] = time.sleep,
+    ) -> None:
+        """Validate the configuration and open the HTTP client.
+
+        Raises LLMConfigError if the key, base URL or model is missing. `transport`
+        and `sleep` can be replaced in tests.
+        """
         if not api_key or api_key.startswith(PLACEHOLDER_PREFIXES):
             raise LLMConfigError("LLM_API_KEY is missing or still a placeholder")
         if not base_url:
@@ -176,12 +188,15 @@ class LLMClient:
         )
 
     def close(self) -> None:
+        """Close the underlying HTTP client."""
         self._http.close()
 
     def __enter__(self) -> "LLMClient":
+        """Allow use as a context manager."""
         return self
 
-    def __exit__(self, *exc) -> None:
+    def __exit__(self, *exc: object) -> None:
+        """Close the client when leaving the with-block."""
         self.close()
 
     def chat(
@@ -191,6 +206,12 @@ class LLMClient:
         temperature: float = 0.0,
         reasoning_effort: str | None = None,
     ) -> LLMResult:
+        """Send a chat completion request and return the result.
+
+        Retries 429, 5xx, timeouts and network errors up to max_retries times.
+        Raises a typed LLMError subclass on failure and ValueError for empty
+        messages or a non-positive max_tokens.
+        """
         if not messages:
             raise ValueError("messages must not be empty")
         if max_tokens <= 0:
@@ -236,6 +257,7 @@ class LLMClient:
         raise last_error
 
     def _delay(self, attempt: int, err: LLMError) -> float:
+        """Seconds to wait before the next attempt: the provider hint, else exponential backoff, plus jitter."""
         retry_after = getattr(err, "retry_after", None)
         if retry_after is not None:
             delay = retry_after
@@ -244,6 +266,7 @@ class LLMClient:
         return delay * (1.0 + self.jitter * random.random())
 
     def _error_from_response(self, resp: httpx.Response) -> LLMError:
+        """Map an HTTP error response to the matching LLMError subclass."""
         status = resp.status_code
         message = _error_message(resp)
         low = message.lower()
@@ -265,6 +288,7 @@ class LLMClient:
         return LLMError(f"HTTP {status}: {message}")
 
     def _parse(self, resp: httpx.Response, start: float, attempts: int, waited: float) -> LLMResult:
+        """Turn a 200 response into an LLMResult, rejecting unusable or empty bodies."""
         try:
             data = resp.json()
             choice = data["choices"][0]
