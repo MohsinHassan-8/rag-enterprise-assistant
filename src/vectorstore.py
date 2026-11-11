@@ -1,4 +1,8 @@
 """ChromaDB wrapper: persistent store, validated batched upsert, semantic search."""
+from collections.abc import Sequence
+from pathlib import Path
+from typing import Any
+
 import chromadb
 import numpy as np
 
@@ -6,7 +10,9 @@ DEFAULT_COLLECTION = "wiki_chunks"
 DEFAULT_BATCH_SIZE = 2000  # well under Chroma's per-call batch limit
 
 
-def get_collection(path, name: str = DEFAULT_COLLECTION, reset: bool = False):
+def get_collection(
+    path: str | Path, name: str = DEFAULT_COLLECTION, reset: bool = False
+) -> Any:
     """Open (or create) a persistent collection that ranks by cosine distance."""
     client = chromadb.PersistentClient(
         path=str(path), settings=chromadb.Settings(anonymized_telemetry=False)
@@ -20,11 +26,11 @@ def get_collection(path, name: str = DEFAULT_COLLECTION, reset: bool = False):
 
 
 def upsert_chunks(
-    collection,
-    ids,
-    embeddings,
-    documents,
-    metadatas=None,
+    collection: Any,
+    ids: Sequence[str],
+    embeddings: Any,
+    documents: Sequence[str],
+    metadatas: Sequence[dict] | None = None,
     batch_size: int = DEFAULT_BATCH_SIZE,
 ) -> dict:
     """Validate, then upsert in batches. Re-running with the same ids is safe."""
@@ -58,7 +64,12 @@ def upsert_chunks(
     return {"upserted": len(keep), "skipped_empty": n - len(keep)}
 
 
-def search(collection, query_embedding, n_results: int = 5, where: dict | None = None) -> list[dict]:
+def search(
+    collection: Any,
+    query_embedding: Any,
+    n_results: int = 5,
+    where: dict | None = None,
+) -> list[dict]:
     """Return the nearest chunks as dicts, best first. Score is 1 - cosine distance."""
     if n_results <= 0:
         raise ValueError("n_results must be positive")
@@ -99,7 +110,9 @@ def search(collection, query_embedding, n_results: int = 5, where: dict | None =
 PLACE_FIELDS = ["place_1", "place_2", "place_3", "place_4", "place_5"]
 
 
-def build_where(theme=None, topic_id=None, place=None):
+def build_where(
+    theme: str | None = None, topic_id: int | None = None, place: str | None = None
+) -> dict | None:
     """Build a Chroma `where` filter from optional theme, topic id and place.
 
     A place matches if it is in any of the place_1..place_5 metadata slots.
@@ -123,7 +136,12 @@ def build_where(theme=None, topic_id=None, place=None):
     return clauses[0] if len(clauses) == 1 else {"$and": clauses}
 
 
-def update_metadata(collection, ids, metadatas, batch_size: int = DEFAULT_BATCH_SIZE) -> dict:
+def update_metadata(
+    collection: Any,
+    ids: Sequence[str],
+    metadatas: Sequence[dict],
+    batch_size: int = DEFAULT_BATCH_SIZE,
+) -> dict:
     """Replace metadata for existing ids in batches. Vectors and text are untouched."""
     n = len(ids)
     if len(metadatas) != n:

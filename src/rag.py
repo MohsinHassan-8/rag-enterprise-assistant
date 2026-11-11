@@ -19,8 +19,9 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
-from src.llm_client import LLMError, LLMTokenLimitError
+from src.llm_client import LLMError, LLMResult, LLMTokenLimitError
 from src.prompts import build_messages, clean_question, is_refusal
 from src.vectorstore import DEFAULT_COLLECTION, build_where, get_collection, search
 
@@ -66,10 +67,12 @@ def extract_citations(answer: str) -> list[int]:
 
 
 def _tokens(text: str) -> list[str]:
+    """Lowercase word tokens of text, with citation markers such as [1] removed."""
     return _WORD_RE.findall(_CITE_RE.sub(" ", (text or "").lower()))
 
 
 def _is_content_word(token: str) -> bool:
+    """True for non-numeric words of 3 or more characters that are not stopwords."""
     return not token.isdigit() and token not in _STOPWORDS and len(token) >= 3
 
 
@@ -85,6 +88,7 @@ def _stem(word: str) -> str:
 
 
 def _content_stems(text: str) -> set[str]:
+    """Set of stemmed content words in text."""
     return {_stem(t) for t in _tokens(text) if _is_content_word(t)}
 
 
@@ -135,6 +139,7 @@ class RAGConfig:
     withhold_unverified: bool = True
 
     def __post_init__(self) -> None:
+        """Reject out-of-range settings with ValueError."""
         if self.top_k <= 0:
             raise ValueError("top_k must be positive")
         if not -1.0 <= self.min_score <= 1.0:
@@ -162,10 +167,12 @@ class RAGResponse:
     filters: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
+        """Return the response as a plain dict (nested values converted)."""
         return asdict(self)
 
 
 def _source_dicts(hits: list[dict]) -> list[dict]:
+    """Convert retrieval hits into the source dicts returned to callers, numbered from 1."""
     out = []
     for number, hit in enumerate(hits, start=1):
         meta = hit.get("metadata") or {}
@@ -188,11 +195,17 @@ class RAGPipeline:
     def __init__(
         self,
         embed_fn: Callable[[str], object],
-        collection,
-        llm,
+        collection: Any,
+        llm: Any,
         config: RAGConfig | None = None,
         log_path: Path | str | None = DEFAULT_LOG_PATH,
-    ):
+    ) -> None:
+        """Store the parts of the pipeline.
+
+        embed_fn turns a question into a vector, collection is the ChromaDB collection,
+        llm is any object with a chat() method like LLMClient, and log_path is the JSONL
+        request log (None turns logging off).
+        """
         self.embed_fn = embed_fn
         self.collection = collection
         self.llm = llm
@@ -200,6 +213,13 @@ class RAGPipeline:
         self.log_path = Path(log_path) if log_path is not None else None
 
     def answer(self, question: str, theme: str | None = None, place: str | None = None) -> RAGResponse:
+        """Answer a question from the knowledge base and return a RAGResponse.
+
+        Steps: clean the question, retrieve (optionally filtered by theme and place),
+        stop below the relevance threshold, generate, then verify citations and
+        grounding. The status field says what happened (see the module docstring).
+        Failures are reported in the response, not raised.
+        """
         cfg = self.config
         t_start = time.perf_counter()
         filters = {k: v for k, v in (("theme", theme), ("place", place)) if v is not None}
@@ -315,7 +335,7 @@ class RAGPipeline:
         )
         return self._finish(resp, lat, t_start, filters)
 
-    def _generate(self, question: str, hits: list[dict]):
+    def _generate(self, question: str, hits: list[dict]) -> tuple[list[dict], LLMResult, bool]:
         """Call the LLM; on a token-limit error retry once with half the context."""
         cfg = self.config
         budgets = [
@@ -335,6 +355,7 @@ class RAGPipeline:
         raise RuntimeError("unreachable")
 
     def _finish(self, resp: RAGResponse, lat: dict, t_start: float, filters: dict | None = None) -> RAGResponse:
+        """Fill in total latency, rounded timings and filters, log the response and return it."""
         lat["total_ms"] = (time.perf_counter() - t_start) * 1000
         resp.filters = dict(filters or {})
         resp.latency_ms = {k: round(v, 2) for k, v in lat.items()}
@@ -342,6 +363,7 @@ class RAGPipeline:
         return resp
 
     def _log(self, resp: RAGResponse) -> None:
+        """Append one JSON line describing the response. Never logs answer text. I/O errors are ignored."""
         if self.log_path is None:
             return
         record = {
@@ -386,7 +408,8 @@ def build_default_pipeline(
     collection = get_collection(ROOT / "chroma_db", DEFAULT_COLLECTION)
     llm = LLMClient.from_env(os.environ)
 
-    def embed(text: str):
+    def embed(text: str) -> Any:
+        """Embed one text as a normalized vector."""
         return model.encode(text, normalize_embeddings=True)
 
     return RAGPipeline(embed, collection, llm, config, log_path)

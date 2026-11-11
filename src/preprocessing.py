@@ -72,6 +72,7 @@ def detect_language(text: str, sample_chars: int = 1000) -> str:
 
 
 def is_english(text: str) -> bool:
+    """True if detect_language() says the text is English."""
     return detect_language(text) == "en"
 
 

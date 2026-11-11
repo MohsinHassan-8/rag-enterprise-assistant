@@ -8,7 +8,7 @@ ALIASES = {
 STOPLIST = {"Earth", "Middle Ages", "Sun"}
 
 
-def normalize_places(raw, max_places=5):
+def normalize_places(raw: str | None, max_places: int = 5) -> list[str]:
     """Split a '|'-joined place string, merge aliases, drop junk, de-duplicate."""
     out = []
     for p in (raw or "").split("|"):
