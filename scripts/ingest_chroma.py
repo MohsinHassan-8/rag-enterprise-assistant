@@ -25,10 +25,12 @@ LOG_PATH = ROOT / "reports" / "ingest_log.json"
 
 
 def dir_size_mb(path: Path) -> float:
+    """Total size of all files under path in megabytes."""
     return sum(f.stat().st_size for f in path.rglob("*") if f.is_file()) / 1e6
 
 
 def main() -> None:
+    """Load the chunks and embeddings into ChromaDB, run the integrity checks and save the log."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--reset", action="store_true",
                         help="delete the collection first and rebuild from scratch")

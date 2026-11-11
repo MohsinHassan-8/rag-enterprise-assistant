@@ -29,7 +29,8 @@ DATE_TITLE = re.compile(
 )
 
 
-def main():
+def main() -> None:
+    """Run BERTopic on the document vectors, set date and year pages aside and save the topics and a review CSV."""
     corpus = pd.read_parquet(PROC / "clean_corpus.parquet")
     index = pd.read_parquet(PROC / "doc_index.parquet")
     emb = np.load(PROC / "doc_embeddings.npy")

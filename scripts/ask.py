@@ -14,6 +14,7 @@ from src.rag import RAGConfig, build_default_pipeline
 
 
 def main() -> None:
+    """Answer each question given on the command line and print the answer, sources and latency."""
     parser = argparse.ArgumentParser()
     parser.add_argument("questions", nargs="+")
     parser.add_argument("--k", type=int, default=5)

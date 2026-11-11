@@ -7,6 +7,8 @@ Writes reports/metadata_log.json.
 """
 import json
 import sys
+from collections.abc import Callable
+from typing import Any
 import time
 from collections import Counter
 from pathlib import Path
@@ -28,7 +30,8 @@ LOG_PATH = ROOT / "reports" / "metadata_log.json"
 SPECIAL = {"Unclassified", "Dates and years"}
 
 
-def median_ms(fn, reps=20):
+def median_ms(fn: Callable[[], Any], reps: int = 20):
+    """Call fn reps times after one warm-up call and summarize the timings in milliseconds."""
     fn()
     times = []
     for _ in range(reps):
@@ -38,7 +41,8 @@ def median_ms(fn, reps=20):
     return float(np.median(times))
 
 
-def main():
+def main() -> None:
+    """Write theme, topic id and place metadata into every ChromaDB chunk, verify it and save the log."""
     chunks = pd.read_parquet(PROC / "chunks_embedded.parquet")
     emb = np.load(PROC / "embeddings.npy")
     themes = pd.read_parquet(PROC / "doc_themes.parquet")

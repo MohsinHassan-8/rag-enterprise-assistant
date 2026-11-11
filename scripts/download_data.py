@@ -11,6 +11,7 @@ OUT_PATH = ROOT / "data" / "raw" / "wiki_simple_raw.jsonl"
 
 
 def main() -> None:
+    """Stream Simple English Wikipedia from Hugging Face and save the raw articles to data/raw/."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--n", type=int, default=7000, help="documents to save")
     parser.add_argument("--min-chars", type=int, default=300)

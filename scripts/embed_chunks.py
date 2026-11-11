@@ -28,11 +28,13 @@ MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
 
 def sync(device: str) -> None:
+    """Wait for queued GPU work so timings are not read too early. Does nothing on CPU."""
     if device == "cuda":
         torch.cuda.synchronize()
 
 
 def main() -> None:
+    """Embed all chunks with sentence-transformers, log the timing and save the embeddings."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--min-chunk-chars", type=int, default=50)

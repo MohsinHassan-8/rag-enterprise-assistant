@@ -67,7 +67,8 @@ CASES = [
 ]
 
 
-def main():
+def main() -> None:
+    """Score retrieval on the easy question set (Precision@K, Recall@K, Hit@K, MRR) and save the report."""
     corpus = pd.read_parquet(ROOT / "data" / "processed" / "clean_corpus.parquet")
     titles = set(corpus["title"])
     missing = sorted({t for _, rel in CASES for t in rel if t not in titles})

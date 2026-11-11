@@ -13,7 +13,8 @@ PROC = ROOT / "data" / "processed"
 DIM = 384
 
 
-def main():
+def main() -> None:
+    """Average each document's chunk vectors into one normalized document vector, after checking the chunk order."""
     chunks = pd.read_parquet(PROC / "chunks.parquet")
     corpus = pd.read_parquet(PROC / "clean_corpus.parquet")
     emb = np.load(PROC / "embeddings.npy")

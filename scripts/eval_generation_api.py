@@ -53,7 +53,8 @@ CASES = [
 ]
 
 
-def filters_respected(body, sources):
+def filters_respected(body: dict, sources: list[dict]) -> bool:
+    """True if every returned source matches the theme and place that were requested."""
     for s in sources:
         if body.get("theme") and s.get("theme") != body["theme"]:
             return False
@@ -62,7 +63,8 @@ def filters_respected(body, sources):
     return True
 
 
-def judge(category, body, expected, http, j):
+def judge(category: str, body: dict, expected: object, http: int, j: dict) -> tuple[bool, str | None]:
+    """Return (passed, failure_reason) for one case, using the rule for its category."""
     if category == "error":
         return http == expected, None if http == expected else "http_%d" % http
     if http != 200:
@@ -84,11 +86,13 @@ def judge(category, body, expected, http, j):
     return True, None
 
 
-def pct(x, q):
+def pct(x: list[float], q: float) -> float | None:
+    """q-th percentile rounded to 1 decimal, or None for an empty list."""
     return round(float(np.percentile(x, q)), 1) if x else None
 
 
-def main():
+def main() -> None:
+    """Send every case to the running API, judge the answers, print the summary and save reports/api_eval.json."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", default="http://127.0.0.1:8000")
     parser.add_argument("--pause", type=float, default=15.0)

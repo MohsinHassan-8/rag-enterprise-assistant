@@ -36,7 +36,8 @@ MISSED = {
 }
 
 
-def main():
+def main() -> None:
+    """Score the NER predictions against the manual labels (strict span and type match) and print precision, recall and F1."""
     s = pd.read_csv(REPORTS / "ner_validation_sample.csv", encoding="utf-8-sig")
     assert len(s) == 40
     rows = []
@@ -53,7 +54,8 @@ def main():
     d = pd.DataFrame(rows)
     d.to_csv(REPORTS / "ner_validation_labels.csv", index=False, encoding="utf-8-sig")
 
-    def prf(tp, fp, fn):
+    def prf(tp: int, fp: int, fn: int):
+        """Precision, recall and F1 from true positives, false positives and false negatives."""
         p = tp / (tp + fp) if tp + fp else float("nan")
         r = tp / (tp + fn) if tp + fn else float("nan")
         f = 2 * p * r / (p + r) if tp and p + r else float("nan")

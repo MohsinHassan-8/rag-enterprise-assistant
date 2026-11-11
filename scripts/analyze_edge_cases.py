@@ -18,14 +18,16 @@ BINS = [0, 400, 800, 1500, 3000, np.inf]
 LABELS = ["<400", "400-799", "800-1499", "1500-2999", "3000+"]
 
 
-def row(name, x):
+def row(name: str, x: pd.DataFrame) -> dict:
+    """Count documents and unclassified documents in x and return one report row named name."""
     n = len(x)
     out = int((x["theme"] == "Unclassified").sum())
     return {"group": name, "documents": n, "unclassified": out,
             "unclassified_pct": round(100.0 * out / n, 1) if n else None}
 
 
-def main():
+def main() -> None:
+    """Compare the unclassified rate by document length and title type, print the table and save the CSV."""
     corpus = pd.read_parquet(PROC / "clean_corpus.parquet")[["id", "char_count"]]
     th = pd.read_parquet(PROC / "doc_themes.parquet")
     d = th.merge(corpus, on="id", how="left")

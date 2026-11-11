@@ -14,7 +14,8 @@ TYPES = {"PERSON", "ORG", "GPE", "LOC"}
 N = 40
 
 
-def main():
+def main() -> None:
+    """Draw one sentence from each of 40 random articles, run spaCy on it and save the sample for manual checking."""
     corpus = pd.read_parquet(PROC / "clean_corpus.parquet")
     th = pd.read_parquet(PROC / "doc_themes.parquet")
     dates = set(th.loc[th["theme"] == "Dates and years", "id"])

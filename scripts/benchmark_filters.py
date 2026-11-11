@@ -4,6 +4,8 @@ Writes reports/filter_benchmark.json. Run after scripts/enrich_chroma.py.
 """
 import json
 import sys
+from collections.abc import Callable
+from typing import Any
 import time
 from pathlib import Path
 
@@ -37,13 +39,15 @@ CASES = [
 ]
 
 
-def timed(fn):
+def timed(fn: Callable[[], Any]):
+    """Call fn once and time it in milliseconds."""
     t0 = time.perf_counter()
     out = fn()
     return (time.perf_counter() - t0) * 1000, out
 
 
-def main():
+def main() -> None:
+    """Time unfiltered and filtered searches, check whether filters hide the expected article, and save the report."""
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", device=device)
     col = get_collection(ROOT / "chroma_db", DEFAULT_COLLECTION)

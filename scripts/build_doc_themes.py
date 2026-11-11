@@ -18,7 +18,8 @@ PROC = ROOT / "data" / "processed"
 REPORTS = ROOT / "reports"
 
 
-def main():
+def main() -> None:
+    """Map BERTopic topic ids to broad themes and save the per-document themes and a summary."""
     dt = pd.read_parquet(PROC / "doc_topics.parquet")
     idx = pd.read_parquet(PROC / "doc_index.parquet")
     assert dt["id"].is_unique

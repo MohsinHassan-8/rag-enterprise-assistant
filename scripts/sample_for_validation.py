@@ -12,11 +12,13 @@ REPORTS = ROOT / "reports"
 N_THEMED, N_OUTLIER = 50, 10
 
 
-def snippet(text, n=150):
+def snippet(text: object, n: int = 150) -> str:
+    """First n characters of text with whitespace collapsed."""
     return " ".join(str(text).split())[:n]
 
 
-def main():
+def main() -> None:
+    """Draw random themed documents and outliers for manual theme validation and save the sample CSV."""
     th = pd.read_parquet(PROC / "doc_themes.parquet")
     corpus = pd.read_parquet(PROC / "clean_corpus.parquet").set_index("id")
     th["text"] = th["id"].map(corpus["text"])

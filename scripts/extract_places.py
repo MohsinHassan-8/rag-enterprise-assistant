@@ -19,7 +19,8 @@ MAX_CHARS = 2000
 TOP_N = 5
 
 
-def clean_place(text):
+def clean_place(text: str):
+    """Strip a spaCy place span and reject spans with newlines or an implausible length."""
     text = text.strip()
     if "\n" in text or len(text) > 40 or len(text) < 3:
         return None
@@ -29,7 +30,8 @@ def clean_place(text):
     return text or None
 
 
-def main():
+def main() -> None:
+    """Find place entities (GPE, LOC) in each document with spaCy, normalise them and save the result."""
     corpus = pd.read_parquet(PROC / "clean_corpus.parquet")
     index = pd.read_parquet(PROC / "doc_index.parquet")
     corpus = corpus.set_index("id").loc[index["id"]].reset_index()

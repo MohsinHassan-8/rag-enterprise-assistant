@@ -27,6 +27,7 @@ DEFAULT_QUERIES = [
 
 
 def main() -> None:
+    """Run a semantic search for the given query, or for built-in demo queries, and print the top results."""
     parser = argparse.ArgumentParser()
     parser.add_argument("query", nargs="?", help="search query (omit to run built-ins)")
     parser.add_argument("--k", type=int, default=3)

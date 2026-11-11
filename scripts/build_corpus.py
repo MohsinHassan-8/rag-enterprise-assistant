@@ -19,6 +19,7 @@ TAG_RE = re.compile(r"</?[a-zA-Z][^>]*>")
 
 
 def main() -> None:
+    """Clean the raw articles, drop short, non-English and duplicate ones, and save the clean corpus."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--min-chars", type=int, default=200,
                         help="minimum length AFTER cleaning")

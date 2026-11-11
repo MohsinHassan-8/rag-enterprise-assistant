@@ -17,6 +17,7 @@ OUT_PATH = ROOT / "data" / "processed" / "chunks.parquet"
 
 
 def main() -> None:
+    """Split the clean corpus into chunks, validate them and save data/processed/chunks.parquet."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--chunk-size", type=int, default=800)
     parser.add_argument("--chunk-overlap", type=int, default=100)
