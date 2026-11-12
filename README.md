@@ -70,7 +70,6 @@ python -m venv venv
 .\venv\Scripts\Activate.ps1
 pip install torch --index-url https://download.pytorch.org/whl/cu126
 pip install -r requirements.txt
-python -m spacy download en_core_web_sm
 ```
 
 Install torch first. Otherwise pip's resolver can backtrack to ancient `sentence-transformers` versions and fail on Python 3.12.
@@ -145,11 +144,13 @@ One table for everything measured in Weeks 2 to 5. The Week sections above give 
 | Theme accuracy | 50 documents checked by hand | 96.0% lenient (86.5% to 98.9%), 82.0% strict (69.2% to 90.2%) |
 | NER | 40 sentences, 53 gold entities, strict scoring | All types precision 60.3%, recall 66.0%, F1 63.1%. GPE precision 85.7%, recall 64.3%. ORG precision 33.3% |
 | Filtered search | p50, k=5 | Unfiltered 7.44 ms, theme 20.03 ms, place 33.43 ms, theme and place 22.92 ms |
-| Tests | pytest | 244 passed |
+| Tests | pytest | 244 passed on the full local setup; 243 passed and 1 skipped on a fresh clone |
 
 Retrieval quality is strong when the question names the topic and weaker when it only describes it (the Tornado and Humidity questions in the hard set are the clear misses). The answer-quality checks rely on keyword matching and small hand-written sets, so they show the guardrails work on these cases, not that the system never hallucinates.
 
 ## Reproduce from scratch
+
+**Verified on a fresh clone.** The repository was cloned into a new folder, a new venv was created, `pip install torch --index-url https://download.pytorch.org/whl/cu126` and `pip install -r requirements.txt` were run (the spaCy model is installed by `requirements.txt`, so no separate download step is needed), then `python -m pytest -q` gave 243 passed and 1 skipped, and `python scripts/verify_env.py` printed `Environment check PASSED`. The skipped test needs `data/processed/doc_topics.parquet`, which is git-ignored, so the full local setup shows 244 passed. The test was run on one Windows machine with an NVIDIA GPU. The first attempt failed with a pip download timeout; on a slow connection use `pip install --default-timeout 120 --retries 10 -r requirements.txt`.
 
 Requirements: Python 3.12, an NVIDIA GPU with a current driver (`scripts/verify_env.py` fails without CUDA; the other scripts pick the CPU automatically but were only run on a GPU), and a free Groq API key. Do the Setup steps above first, then:
 
